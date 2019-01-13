@@ -1,0 +1,17 @@
+data/Actuators/BDCMotor_class.h.i
+data/Communications/Nfc.h.i
+data/Sensors/MagneticSensor.h.i
+data/Common/ComponentObject.h.i
+data/Common/Component.h.i
+data/Sensors/GyroSensor.h.i
+data/Actuators/StepperMotor_class.h.i
+data/Sensors/MotionSensor.h.i
+data/Sensors/RangeSensor.h.i
+data/Sensors/PressureSensor.h.i
+data/Sensors/LightSensor.h.i
+data/Sensors/TempSensor.h.i
+data/Actuators/BCDMotor.h.i
+data/Sensors/HumiditySensor.h.i
+data/Actuators/StepperMotor.h.i
+data/Actuators/BDCMotor.h.i
+data/Common/Component_class.h.i
