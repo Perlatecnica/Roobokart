@@ -106,7 +106,8 @@ int Planning::SetCurrentMode(int mode){
 		break;
 
 	case TRAFFICLIGHT_MANAGEMENT_MODE:
-		nextMode = CROSS_MANAGEMENT_MODE;
+		nextMode = NAV_MODE;
+		//nextMode = CROSS_MANAGEMENT_MODE;
 		break;
 
 	case CROSS_MANAGEMENT_MODE:

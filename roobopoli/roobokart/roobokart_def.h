@@ -26,6 +26,8 @@
 #define DIR_RIGHT	2
 
 #define IR_THRESHOLD 0.8
+#define RED_THRESHOLD_DEFAULT 160
+#define GREEN_THRESHOLD_DEFAULT 310
 
 #define RIGHT_IR_WHITE  rfrontIR <= IR_THRESHOLD
 #define LEFT_IR_WHITE  lfrontIR <= IR_THRESHOLD
@@ -69,10 +71,10 @@
 /* XNucleo IHM12A1 */
 #define F_E_PIN D2
 #define STANDBY_RST_PIN D9
-#define DIR_A_PIN   D6
-#define DIR_B_PIN   D7
-#define PWM_A_PIN   D5
-#define PWM_B_PIN   D4
+#define DIR_A_PIN   D7//D6
+#define DIR_B_PIN   D6//D7
+#define PWM_A_PIN   D4//D5
+#define PWM_B_PIN   D5//D4
 #define PWM_REF_PIN A0
 
 #endif

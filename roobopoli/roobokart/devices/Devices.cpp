@@ -57,7 +57,7 @@ int Devices::getRedThreshold(){
 }
 
 void Devices::setGreenThreshold(int greent){
-	float temp = greent*20;
+	float temp = greent*10;//20;
 	temp = temp / 100;
 	greenthreshold = greent - temp;
 }

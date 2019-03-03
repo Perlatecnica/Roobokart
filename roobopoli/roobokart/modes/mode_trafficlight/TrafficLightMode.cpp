@@ -46,15 +46,19 @@ int TrafficLightMode::runMode(void)
 		red = currDevices->color->ReadRed();
 		green = currDevices->color->ReadGreen();
 
-		if(red < redthreshold){//200
-			currDevices->currMotors.run(0, -10, MOTOR_LEFT , MOTOR_RIGHT);
-		} else if(green < greenthreshold){
+		if(red < redthreshold & red < green){//200
+			currDevices->currMotors.run(0, -12, MOTOR_LEFT , MOTOR_RIGHT);
+		} else if(green < greenthreshold & red > green){
 			currentmode = nextmode;
 			currDevices->color->SetMode(TCS3200::POWERDOWN);
+
+			//vado un po avanti per superare il semaforo
+			currDevices->currMotors.run(0, 35, MOTOR_LEFT , MOTOR_RIGHT);
+			wait_ms(500);
 			break;
-		} else {
-			currDevices->currMotors.run(0, 35, MOTOR_LEFT , MOTOR_RIGHT);//25
-		}
+		} //else {
+//			currDevices->currMotors.run(0, 35, MOTOR_LEFT , MOTOR_RIGHT);//25
+//		}
 	}
 
 	return currentmode;

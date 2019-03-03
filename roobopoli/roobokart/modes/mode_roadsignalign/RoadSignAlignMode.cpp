@@ -73,13 +73,15 @@ int RoadSignAlignMode::runMode(void)
 				if(LEFT_IR_WHITE){
 					currDevices->currMotors.speed(MOTOR_LEFT,40);
 				} else {
-					currDevices->currMotors.stop(MOTOR_LEFT);
+					//currDevices->currMotors.stop(MOTOR_LEFT);
+					currDevices->currMotors.speed(MOTOR_LEFT,-10);
 				}
 
 				if(RIGHT_IR_WHITE){
 					currDevices->currMotors.speed(MOTOR_RIGHT,40);
 				} else {
-					currDevices->currMotors.stop(MOTOR_RIGHT);
+					//currDevices->currMotors.stop(MOTOR_RIGHT);
+					currDevices->currMotors.speed(MOTOR_RIGHT,-10);
 				}
 
 				if((RIGHT_IR_BLACK) & (LEFT_IR_BLACK) ){
@@ -89,7 +91,9 @@ int RoadSignAlignMode::runMode(void)
 					float setPointYaw = currDevices->mems->attitude.yaw;
 					currPlanning->setSetPointYaw(setPointYaw);
 					wait_ms(500);
-					currDevices->currMotors.run(0, 50, MOTOR_LEFT , MOTOR_RIGHT);
+					currDevices->currMotors.run(0, 40, MOTOR_LEFT , MOTOR_RIGHT);
+					wait_ms(100);
+					currDevices->currMotors.run(0, 30, MOTOR_LEFT , MOTOR_RIGHT);
 					status = READ_CODE_STATUS;
 				}
 				break;
@@ -123,7 +127,7 @@ int RoadSignAlignMode::runMode(void)
 
 			case PREPARE_NEXT_STATUS:
 				currentmode = nextmode;
-				currDevices->currMotors.stop();
+				//currDevices->currMotors.stop();
 				// Switch ON the sensor of color
 				currDevices->color->SetMode(TCS3200::SCALE_20);
 				// It informs the planning about the read value of cross road. Planning is in charge of choosing the next direction

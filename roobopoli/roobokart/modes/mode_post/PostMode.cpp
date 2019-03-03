@@ -50,41 +50,20 @@ int PostMode::runMode(void)
 
 	// Evaluating RED value
 	wait_ms(500);
-	currDevices->tof->display("red");
-	while( currDevices->usrButton->read() != 0 ){;}
-	int red = currDevices->color->ReadRed();
+	int red = RED_THRESHOLD_DEFAULT;
 	currDevices->setRedThreshold(red);
 	printf("RED value: %d!\r\n",red);
 	printf("RED Threshold: %d!\r\n",currDevices->getRedThreshold());
 
 	// Evaluating GREEN value
 	wait_ms(500);
-	currDevices->tof->display("gree");
-	while( currDevices->usrButton->read() != 0 ){;}
-	int green = currDevices->color->ReadGreen();
+	int green = GREEN_THRESHOLD_DEFAULT;
 	currDevices->setGreenThreshold(green);
 	printf("GREEN value: %d!\r\n",green);
 	printf("GREEN Threshold: %d!\r\n",currDevices->getGreenThreshold());
 
 	wait_ms(300);
 	currDevices->color->SetMode(TCS3200::POWERDOWN);
-
-	/*// Evaluating BLACK DX value
-	wait_ms(500);
-	currDevices->tof->display("blac");
-	wait_ms(500);
-	currDevices->tof->display("dx");
-	while( currDevices->usrButton->read() != 0 ){;}
-	float rfrontIR_black = currDevices->rfrontIR->read();
-
-	// Evaluating WHITE DX value
-	wait_ms(500);
-	currDevices->tof->display("whit");
-	wait_ms(500);
-	currDevices->tof->display("dx");
-	while( currDevices->usrButton->read() != 0 ){;}
-	float rfrontIR_black = currDevices->rfrontIR->read();
-*/
 
 	currDevices->tof->display("go");
 	while( currDevices->usrButton->read() != 0 ){;}
@@ -107,7 +86,8 @@ int PostMode::calSPDirection(){
 	rfrontIR = currDevices->rfrontIR->read();
 	lfrontIR = currDevices->lfrontIR->read();
 
-	spd = lfrontIR - rfrontIR;
+	//spd = lfrontIR - rfrontIR;
+	spd = (rfrontIR + lfrontIR)/2 - ((rfrontIR + lfrontIR)*15/100); // spd is the average of the dx and sx reading - 30%
 	currDevices->setSPDirection(spd);
 	wait(1);
 	return errcode;

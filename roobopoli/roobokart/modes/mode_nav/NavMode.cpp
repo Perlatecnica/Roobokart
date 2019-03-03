@@ -21,8 +21,9 @@ NavMode::NavMode(Serial* ser,Devices* devices,int yourmode, Planning *planning)
 {
 	mymode = yourmode;
 	currDevices = devices;
-	//dirPID = new PID(100, -100, 70, 0, 0); // breadbord bianca
-	dirPID = new PID(100, -100, 95, 10, 20); // breadbord bianca
+	//dirPID = new PID(100, -100, 70, 0, 0); // Setting 1
+	//dirPID = new PID(100, -100, 50, 20, 25); // Setting 2
+	dirPID = new PID(100, -100, 85, 4, 6);
 
 	currPlanning = planning;
 }
@@ -37,6 +38,7 @@ int NavMode::runMode(void)
 	int speed = currPlanning->getSpeed() ;
 	int roadsigndetected = 0; // It stores the information that
 	double det = 0; // deltaT for PID evaluation
+	int8_t delSpeed = 0;
 
 	currentmode = mymode;
 	nextmode = currPlanning->SetCurrentMode(currentmode);
@@ -108,6 +110,9 @@ int NavMode::runMode(void)
 					roadsigndetected = 1;
 				}else {
 					// The duckiebot navigates until the road sign is detected
+					delSpeed = direction;
+					if (delSpeed<0) delSpeed *= -1;
+					delSpeed = delSpeed/100*speed/1.9;
 					currDevices->currMotors.turn(direction, speed, MOTOR_LEFT , MOTOR_RIGHT);
 				}
 			}
