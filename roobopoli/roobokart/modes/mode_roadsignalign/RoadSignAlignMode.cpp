@@ -74,14 +74,14 @@ int RoadSignAlignMode::runMode(void)
 					currDevices->currMotors.speed(MOTOR_LEFT,40);
 				} else {
 					//currDevices->currMotors.stop(MOTOR_LEFT);
-					currDevices->currMotors.speed(MOTOR_LEFT,-10);
+					currDevices->currMotors.speed(MOTOR_LEFT,BRAKING_FORCE_DEFAULT);
 				}
 
 				if(RIGHT_IR_WHITE){
 					currDevices->currMotors.speed(MOTOR_RIGHT,40);
 				} else {
 					//currDevices->currMotors.stop(MOTOR_RIGHT);
-					currDevices->currMotors.speed(MOTOR_RIGHT,-10);
+					currDevices->currMotors.speed(MOTOR_RIGHT,BRAKING_FORCE_DEFAULT);
 				}
 
 				if((RIGHT_IR_BLACK) & (LEFT_IR_BLACK) ){
