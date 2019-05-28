@@ -27,7 +27,7 @@
 #include "PID.h"
 #include "MEMS_IKS01A2.h"
 
-#define ROADSIGN_DETECTION_THRESHOLD_DEFAULT 0.8
+
 
 class Devices {
 
