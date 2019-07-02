@@ -71,13 +71,13 @@ public:
         display = new Display(*stmpe1600_exp0, *stmpe1600_exp1);
 
         xshutdown_centre = new Stmpe1600DigiOut(*dev_i2c, GPIO_15, (0x42 * 2));     // U19 on schematic
-        sensor_centre = new VL53L0X(*dev_i2c, *xshutdown_centre, A2);
+        sensor_centre = new VL53L0X(*dev_i2c, *xshutdown_centre, NC);
 
         xshutdown_left = new Stmpe1600DigiOut(*dev_i2c, GPIO_14, (0x43 * 2));     // U21 on schematic
-        sensor_left = new VL53L0X(*dev_i2c, *xshutdown_left, D8);
+        sensor_left = new VL53L0X(*dev_i2c, *xshutdown_left, NC);
 
         xshutdown_right = new Stmpe1600DigiOut(*dev_i2c, GPIO_15, (0x43 * 2));     // U21 on schematic
-        sensor_right = new VL53L0X(*dev_i2c, *xshutdown_right, D2);
+        sensor_right = new VL53L0X(*dev_i2c, *xshutdown_right, NC);
     }
 
     /** Constructor 2
