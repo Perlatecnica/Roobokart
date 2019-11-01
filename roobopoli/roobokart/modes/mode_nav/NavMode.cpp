@@ -57,30 +57,11 @@ int NavMode::runMode(void)
 		// Reading IRs value
 		rfrontIR = currDevices->rfrontIR->read();
 		lfrontIR = currDevices->lfrontIR->read();
-		//cfrontIR = currDevices->cfrontIR->read();
 
 		// The Roobokart shall follow a constant value evaluated at Calibration time
 		currentdirection = rfrontIR;
 
-		// Managing the speed
-		// Check if the Roobokart leaved the white lane on the right side
-//		if(currentdirection==0) {
-//			// The Roobokart leaved the whit lane on the righ side, decelerate in order to help the PID algo
-//			// The bot decelerate till the min cruise vel
-//			// Speed is linearly decreased
-//			if(speed > MIN_NAV_SPEED) {
-//				speed =  speed - 2;
-//			}
-//			else {
-//				navstatus = HARD_CURVE_STATUS;
-//			}
-//
-//		}else {
-			// Accelerate till max cruise vel
-		//speed = CRUISE_NAV_SPEED;
-			speed = currPlanning->accelerate(); //50;
-			//navstatus = NORMAL_NAV_STATUS;
-	//	}
+		speed = currPlanning->accelerate(); //50;
 
 		// Evaluating PID for direction correction
 		det = (double)pidtimer.read();
@@ -97,50 +78,40 @@ int NavMode::runMode(void)
 #endif
 
 
-		//switch(navstatus){
-
 		// Managing normal navigation
 		// In this status the roadsign can be detected
 		//case NORMAL_NAV_STATUS:
-			// Roobokart navigates
-			if(roadsigndetected == 0) {
-				// Check if the road sign is detected
-				if(currDevices->roadsignDetected(cfrontIR)){
-					// Once the road sign has been detected, the duckiebot proceeds at slower speed
-					speed = (0.8)*speed;
-					currDevices->currMotors.turn(0, speed, MOTOR_LEFT , MOTOR_RIGHT);
-					roadsigndetected = 1;
-				}else {
-					// The duckiebot navigates until the road sign is detected
-					//delSpeed = 0;
-					delSpeed = direction;
-					if (delSpeed<0) delSpeed *= -1;
-					delSpeed = (delSpeed/100)*speed;///1.1;
-					currDevices->currMotors.turn(-direction, speed-delSpeed, MOTOR_LEFT , MOTOR_RIGHT);
-				}
+		// Roobokart navigates
+		if(roadsigndetected == 0) {
+			// Check if the road sign is detected
+			if(currDevices->roadsignDetected(cfrontIR)){
+				// Once the road sign has been detected, the duckiebot proceeds at slower speed
+				speed = (0.8)*speed;
+				currDevices->currMotors.turn(0, speed, MOTOR_LEFT , MOTOR_RIGHT);
+				roadsigndetected = 1;
+			}else {
+				// The duckiebot navigates until the road sign is detected
+				//delSpeed = 0;
+				delSpeed = direction;
+				if (delSpeed<0) delSpeed *= -1;
+				delSpeed = (delSpeed/100)*speed;///1.1;
+				currDevices->currMotors.turn(-direction, speed-delSpeed, MOTOR_LEFT , MOTOR_RIGHT);
 			}
-			// Road sign detected - managing the handshake with next mode
-			else {
-				// The Roobokart is stopped as soon as the cfrontIR sensor is over the blue line
-				if(!currDevices->roadsignDetected(cfrontIR)){
-					currDevices->currMotors.stop(); //.turn(0, 0, MOTOR_LEFT , MOTOR_RIGHT);
+		}
+		// Road sign detected - managing the handshake with next mode
+		else {
+			// The Roobokart is stopped as soon as the cfrontIR sensor is over the blue line
+			if(!currDevices->roadsignDetected(cfrontIR)){
+				currDevices->currMotors.stop(); //.turn(0, 0, MOTOR_LEFT , MOTOR_RIGHT);
 
-					// Roadsign detected, it switches to next mode
-					currentmode = nextmode;
-					break;
-				}
+				// Roadsign detected, it switches to next mode
+				currentmode = nextmode;
+				break;
 			}
-			//break;
+		}
+		//break;
 
-		// Managing Hard curve on the right
-		// This status manages only the curve. It isn't possible to detect the roadsign
-		// No controls, only lane search based on PID algo
-//		case HARD_CURVE_STATUS:
-//			currDevices->currMotors.turn(direction, speed, MOTOR_LEFT , MOTOR_RIGHT);
-//			break;
-//
-//
-//		} // end switch
+
 		wait_ms(10);//40
 	} // end while
 
