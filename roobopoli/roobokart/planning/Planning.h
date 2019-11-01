@@ -20,7 +20,7 @@
 #include "../roobokart_def.h"
 
 #define MAX_NAV_SPEED 100
-#define CRUISE_NAV_SPEED 50
+#define CRUISE_NAV_SPEED 36// Blue 35
 #define MIN_NAV_SPEED 20
 
 class Planning {

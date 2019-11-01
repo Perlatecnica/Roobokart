@@ -49,7 +49,7 @@ float Devices::getSPDirection(){
 void Devices::setRedThreshold(int redt){
 	float temp = redt*20;
 	temp = temp / 100;
-	redthreshold = redt - temp;
+	redthreshold = redt + temp;
 }
 
 int Devices::getRedThreshold(){
@@ -59,7 +59,7 @@ int Devices::getRedThreshold(){
 void Devices::setGreenThreshold(int greent){
 	float temp = greent*10;//20;
 	temp = temp / 100;
-	greenthreshold = greent - temp;
+	greenthreshold = greent + temp;
 }
 
 int Devices::getGreenThreshold(){

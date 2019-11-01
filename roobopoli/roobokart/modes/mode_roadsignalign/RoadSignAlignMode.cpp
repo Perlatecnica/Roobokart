@@ -41,6 +41,7 @@ int RoadSignAlignMode::runMode(void)
 	currentmode = mymode;
 	nextmode = currPlanning->SetCurrentMode(currentmode);
 	currDevices->tof->display(currentmode);
+	double speed;
 
 	while(currentmode == mymode){
 		rfrontIR = 0;
@@ -51,7 +52,7 @@ int RoadSignAlignMode::runMode(void)
 			rfrontIR += currDevices->rfrontIR->read();
 			lfrontIR += currDevices->lfrontIR->read();
 			cfrontIR += currDevices->cfrontIR->read();
-			wait_ms(10);
+			//wait_ms(10);
 		}
 
 		rfrontIR = rfrontIR/5;
@@ -67,33 +68,35 @@ int RoadSignAlignMode::runMode(void)
 #endif
 		printf("status %d\r\n", status);
 
-
+		speed = currPlanning->getSpeed();
+		speed = 0.8*speed;
 		switch(status){
 			case NOT_ALIGNED_STATUS:
 				if(LEFT_IR_WHITE){
-					currDevices->currMotors.speed(MOTOR_LEFT,40);
+
+					currDevices->currMotors.speed(MOTOR_LEFT,speed);
 				} else {
 					//currDevices->currMotors.stop(MOTOR_LEFT);
 					currDevices->currMotors.speed(MOTOR_LEFT,BRAKING_FORCE_DEFAULT);
 				}
 
 				if(RIGHT_IR_WHITE){
-					currDevices->currMotors.speed(MOTOR_RIGHT,40);
+					currDevices->currMotors.speed(MOTOR_RIGHT,speed);
 				} else {
 					//currDevices->currMotors.stop(MOTOR_RIGHT);
 					currDevices->currMotors.speed(MOTOR_RIGHT,BRAKING_FORCE_DEFAULT);
 				}
 
-				if((RIGHT_IR_BLACK) & (LEFT_IR_BLACK) ){
+				if((RIGHT_IR_BLACK) && (LEFT_IR_BLACK) ){
 					currDevices->mems->calibrateLSM6DSL(50);
 					// It stores the current yaw as setpoint
 					currDevices->mems->compute();
 					float setPointYaw = currDevices->mems->attitude.yaw;
 					currPlanning->setSetPointYaw(setPointYaw);
 					wait_ms(500);
-					currDevices->currMotors.run(0, 40, MOTOR_LEFT , MOTOR_RIGHT);
+					currDevices->currMotors.run(0, speed, MOTOR_LEFT , MOTOR_RIGHT);
 					wait_ms(100);
-					currDevices->currMotors.run(0, 30, MOTOR_LEFT , MOTOR_RIGHT);
+					currDevices->currMotors.run(0, speed, MOTOR_LEFT , MOTOR_RIGHT);
 					status = READ_CODE_STATUS;
 				}
 				break;

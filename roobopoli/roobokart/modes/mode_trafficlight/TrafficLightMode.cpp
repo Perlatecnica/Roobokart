@@ -46,9 +46,9 @@ int TrafficLightMode::runMode(void)
 		red = currDevices->color->ReadRed();
 		green = currDevices->color->ReadGreen();
 
-		if(red < redthreshold & red < green){//200
+		if((red < redthreshold) && (red < green)){//200
 			currDevices->currMotors.run(0, BRAKING_FORCE_DEFAULT, MOTOR_LEFT , MOTOR_RIGHT);
-		} else if(green < greenthreshold & red > green){
+		} else if((green < greenthreshold) && (red > green)){
 			currentmode = nextmode;
 			currDevices->color->SetMode(TCS3200::POWERDOWN);
 
