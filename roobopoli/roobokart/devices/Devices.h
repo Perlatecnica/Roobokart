@@ -46,7 +46,7 @@ public:
     AnalogIn *cfrontIR;
 
     DigitalIn *usrButton;
-    float roadsign_detect_threshold; // Roadsign detection threshold
+
     bool roadsignDetected(float cfrontIRvalue);
 
     void setSPDirection(float spd);

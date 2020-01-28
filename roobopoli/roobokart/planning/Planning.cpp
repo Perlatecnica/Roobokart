@@ -37,14 +37,14 @@ Planning::Planning(Devices* devices)
 	currDevices = devices;
 	seed = 78;
 	planningTimer.start();
-	accelerationRate = acceleration_0to100*10; //(acceleration_0to100*1000)/100;
+	accelerationRate = acceleration_0to100*10;
 	decelerationRate = deceleration_100to0*10;
-
 }
 
 
 /**
  * It informs the planning about tha value of the cross road read.
+ * It sets the direction, that will be gather
  */
 void Planning::setCrossCodeRead(uint32_t crosscoderead){
 	currcoderead = crosscoderead;
@@ -143,6 +143,7 @@ int Planning::getSpeed(){
 	return currentSpeed;
 }
 
+// It stores the set point value for yaw angle
 void Planning::setSetPointYaw(float spy){
 	setPointYaw = spy;
 }

@@ -36,8 +36,8 @@ int NavMode::runMode(void)
 	printf("Nav Mode: It works!\r\n");
 #endif
 
-	double speed = currPlanning->getSpeed() ;
-	int roadsigndetected = 0; // It stores the information that
+	double speed = 0;// = currPlanning->getSpeed() ;
+	int roadsigndetected = 0; // It stores the information that the road sign has been detected
 	double det = 0; // deltaT for PID evaluation
 	double delSpeed = 0;
 
@@ -57,15 +57,16 @@ int NavMode::runMode(void)
 		// Reading IRs value
 		rfrontIR = currDevices->rfrontIR->read();
 		lfrontIR = currDevices->lfrontIR->read();
+		cfrontIR = currDevices->cfrontIR->read();
 
 		// The Roobokart shall follow a constant value evaluated at Calibration time
 		currentdirection = rfrontIR;
 
-		speed = currPlanning->accelerate(); //50;
+		speed = currPlanning->accelerate();
 
 		// Evaluating PID for direction correction
 		det = (double)pidtimer.read();
-		direction = (int8_t)(dirPID->evaluate(det,spd,currentdirection)); //0.3
+		direction = (int8_t)(dirPID->evaluate(det,spd,currentdirection));
 		pidtimer.reset();
 
 
@@ -74,7 +75,8 @@ int NavMode::runMode(void)
 		printf("lfrontIR: %f\r\n",lfrontIR);
 		printf("cfrontIR: %f\r\n",cfrontIR);
 		printf("direction: %3d\r\n",direction);
-		printf("\033[4A");
+		printf("speed: %f\r\n",speed);
+		printf("\033[5A");
 #endif
 
 
@@ -82,20 +84,30 @@ int NavMode::runMode(void)
 		// In this status the roadsign can be detected
 		//case NORMAL_NAV_STATUS:
 		// Roobokart navigates
+#ifdef DEBUG_NAV_MODE
+		printf("roadsigndetected: %d\r\n",roadsigndetected);
+#endif
+		// Check if the road sign is detected
 		if(roadsigndetected == 0) {
-			// Check if the road sign is detected
 			if(currDevices->roadsignDetected(cfrontIR)){
-				// Once the road sign has been detected, the duckiebot proceeds at slower speed
+				// Once the road sign has been detected, the Roobokart proceeds at slower speed
 				speed = (0.8)*speed;
+
+				currDevices->tof->display(speed);
+
 				currDevices->currMotors.turn(0, speed, MOTOR_LEFT , MOTOR_RIGHT);
 				roadsigndetected = 1;
 			}else {
-				// The duckiebot navigates until the road sign is detected
-				//delSpeed = 0;
+				// The Roobokart navigates until the road sign is detected
+				// if direction is different from zero, the speed is reduced in order to help the PID algorithm
 				delSpeed = direction;
 				if (delSpeed<0) delSpeed *= -1;
-				delSpeed = (delSpeed/100)*speed;///1.1;
-				currDevices->currMotors.turn(-direction, speed-delSpeed, MOTOR_LEFT , MOTOR_RIGHT);
+				delSpeed = (delSpeed/100)*speed;
+
+				speed = speed - delSpeed;
+				currDevices->tof->display(speed);
+
+				currDevices->currMotors.turn(-direction, speed, MOTOR_LEFT , MOTOR_RIGHT);
 			}
 		}
 		// Road sign detected - managing the handshake with next mode
@@ -106,6 +118,7 @@ int NavMode::runMode(void)
 
 				// Roadsign detected, it switches to next mode
 				currentmode = nextmode;
+				roadsigndetected = 0;
 				break;
 			}
 		}
@@ -120,5 +133,3 @@ int NavMode::runMode(void)
 	pidtimer.reset();
 	return currentmode;
 }
-
-

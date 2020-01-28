@@ -16,26 +16,29 @@
 #include "../../roobokart/devices/Devices.h"
 
 Devices::Devices(Serial* ser){
+	// IR sensors instances
 	rfrontIR = new AnalogIn(RIGHT_FRONT_IR);
 	lfrontIR = new AnalogIn(LEFT_FRONT_IR);
 	cfrontIR = new AnalogIn(CENTRE_FRONT_IR);
 
+	// User button instance
 	usrButton = new DigitalIn(USER_BUTTON);
 
+	// Color sensor instance
 	color = new TCS3200(TCS3200_S0, TCS3200_S1, TCS3200_S2, TCS3200_S3, TCS3200_OUT);
 
+	// Proximity sensors instance
 	tof = new ToF53L0A1();
 
+	// MEMS sensors instance
 	mems = new MEMS_IKS01A2();
 	mems->init(IKS01A2_I2C_SDA, IKS01A2_I2C_SCL, IKS01A2_INT1, IKS01A2_INT2);
 	mems->setODR(155);
-
-	roadsign_detect_threshold = ROADSIGN_DETECTION_THRESHOLD_DEFAULT;
 }
 
 
 bool Devices::roadsignDetected(float cfrontIRvalue){
-	return (cfrontIRvalue < roadsign_detect_threshold);
+	return (cfrontIRvalue < ROADSIGN_DETECTION_THRESHOLD_DEFAULT);
 }
 
 void Devices::setSPDirection(float spd){
