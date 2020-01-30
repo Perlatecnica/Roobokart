@@ -29,11 +29,16 @@ public:
 	XNucleo53L0A1 *board;
 	void display(int value);
 	void display(char *value);
+	uint16_t getLeftMeasure();
+	uint16_t getRightMeasure();
+
 
 private:
 	DevI2C *device_i2c;
-	VL53L0X_RangingMeasurementData_t data_sensor_centre;
+	VL53L0X_RangingMeasurementData_t data_sensor_left;
+	VL53L0X_RangingMeasurementData_t data_sensor_right;
 	int status;
+	OperatingMode operating_mode;// = range_single_shot_polling;
 };
 #endif
 
