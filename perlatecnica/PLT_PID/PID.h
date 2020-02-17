@@ -32,7 +32,7 @@ class PID
         // Returns the manipulated variable given a setpoint and current process value
         // dt -  loop interval time
         double evaluate(double dt, double setpoint, double currentvalue );
-
+        void reset();
 
     private:
         double _max;

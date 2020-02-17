@@ -30,6 +30,11 @@ PID::PID(double max, double min, double Kp, double Kd, double Ki )
 	_integral = 0;
 }
 
+void PID::reset(){
+	_old_error = 0;
+	_integral = 0;
+}
+
 double PID::evaluate(double dt, double setpoint, double currentvalue )
 {
 	double _dt = dt;

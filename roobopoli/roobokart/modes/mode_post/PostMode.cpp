@@ -68,6 +68,7 @@ int PostMode::runMode(void)
 	currDevices->tof->display("go");
 	while( currDevices->usrButton->read() != 0 ){;}
 
+	currDevices->buzz(7633,.5,1);
 	while(currentmode == mymode){
 		currentmode = nextmode;//NAV_MODE;
 	}

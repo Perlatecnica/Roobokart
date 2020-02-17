@@ -21,6 +21,8 @@ RoadSignAlignMode::RoadSignAlignMode(Serial* ser,Devices* devices,int yourmode, 
 	mymode = yourmode;
 	currDevices = devices;
 	currPlanning = planning;
+
+	dirPID_RS = new PID(100, -100, NAV_KP, NAV_KD, NAV_KI);
 }
 
 
@@ -37,11 +39,15 @@ int RoadSignAlignMode::runMode(void)
 	uint32_t roadsignvalue = 0;
 	uint32_t mask0 = 0xFFFFFFFE;
 	uint32_t mask1 = 0x00000001;
+	double det = 0;
 
 	currentmode = mymode;
 	nextmode = currPlanning->SetCurrentMode(currentmode);
 	currDevices->tof->display(currentmode);
 	double speed;
+
+	pidtimer_RS.start();
+	dirPID_RS->reset();
 
 	while(currentmode == mymode){
 		rfrontIR = 0;
@@ -70,40 +76,42 @@ int RoadSignAlignMode::runMode(void)
 
 		speed = currPlanning->getSpeed();
 		speed = 0.8*speed;
+
 		switch(status){
 			case NOT_ALIGNED_STATUS:
 				if(LEFT_IR_WHITE){
-
 					currDevices->currMotors.speed(MOTOR_LEFT,speed);
 				} else {
-					//currDevices->currMotors.stop(MOTOR_LEFT);
 					currDevices->currMotors.speed(MOTOR_LEFT,BRAKING_FORCE_DEFAULT);
 				}
 
 				if(RIGHT_IR_WHITE){
 					currDevices->currMotors.speed(MOTOR_RIGHT,speed);
 				} else {
-					//currDevices->currMotors.stop(MOTOR_RIGHT);
 					currDevices->currMotors.speed(MOTOR_RIGHT,BRAKING_FORCE_DEFAULT);
 				}
 
 				if((RIGHT_IR_BLACK) && (LEFT_IR_BLACK) ){
+					// It calibrates the MEMS sensors
 					currDevices->mems->calibrateLSM6DSL(50);
 					// It stores the current yaw as setpoint
 					currDevices->mems->compute();
-					float setPointYaw = currDevices->mems->attitude.yaw;
+					setPointYaw = currDevices->mems->attitude.yaw;
 					currPlanning->setSetPointYaw(setPointYaw);
-					wait_ms(500);
-					currDevices->currMotors.run(0, speed, MOTOR_LEFT , MOTOR_RIGHT);
-					wait_ms(100);
-					currDevices->currMotors.run(0, speed, MOTOR_LEFT , MOTOR_RIGHT);
+					wait_ms(300);
 					status = READ_CODE_STATUS;
 				}
 				break;
 
 
-
 			case READ_CODE_STATUS:
+				currDevices->mems->compute();
+				yaw = currDevices->mems->attitude.yaw;
+				det = (double)pidtimer_RS.read();
+				direction_RS = (int8_t)(dirPID_RS->evaluate(det,setPointYaw,yaw));
+				pidtimer_RS.reset();
+				currDevices->currMotors.turn(-direction_RS, speed, MOTOR_LEFT , MOTOR_RIGHT);
+
 				if (righIR_previousvalue && RIGHT_IR_BLACK){
 
 					// Writing the read bit value at lsb position
@@ -116,7 +124,7 @@ int RoadSignAlignMode::runMode(void)
 					bitcount++;
 					righIR_previousvalue = false;
 					if(bitcount > BITS_TO_BE_READ){
-						currDevices->tof->display((int)roadsignvalue);
+						//currDevices->tof->display((int)roadsignvalue);
 						status = PREPARE_NEXT_STATUS;
 					}
 					else {
@@ -140,5 +148,7 @@ int RoadSignAlignMode::runMode(void)
 		}
 
 	} // end while
+	pidtimer_RS.stop();
+	pidtimer_RS.reset();
 	return currentmode;
 }

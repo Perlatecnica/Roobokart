@@ -22,7 +22,7 @@ NavMode::NavMode(Serial* ser,Devices* devices,int yourmode, Planning *planning)
 	mymode = yourmode;
 	currDevices = devices;
 	//dirPID = new PID(100, -100, 60, 1, 50); //prima del cambio motore
-	dirPID = new PID(100, -100, 64, 1, 50); // Setting 1
+	dirPID = new PID(100, -100, NAV_KP, NAV_KD, NAV_KI); // Setting 1
 	//dirPID = new PID(100, -100, 50, 20, 25); // Setting 2
 	//dirPID = new PID(100, -100, 85, 4, 6);
 
@@ -49,8 +49,7 @@ int NavMode::runMode(void)
 	spd = currDevices->getSPDirection(); //0.3
 
 	pidtimer.start();
-
-	navstatus = NORMAL_NAV_STATUS;
+	dirPID->reset();
 
 	while(currentmode == mymode){
 
@@ -80,9 +79,6 @@ int NavMode::runMode(void)
 #endif
 
 
-		// Managing normal navigation
-		// In this status the roadsign can be detected
-		//case NORMAL_NAV_STATUS:
 		// Roobokart navigates
 #ifdef DEBUG_NAV_MODE
 		printf("roadsigndetected: %d\r\n",roadsigndetected);
@@ -114,8 +110,7 @@ int NavMode::runMode(void)
 		else {
 			// The Roobokart is stopped as soon as the cfrontIR sensor is over the blue line
 			if(!currDevices->roadsignDetected(cfrontIR)){
-				currDevices->currMotors.stop(); //.turn(0, 0, MOTOR_LEFT , MOTOR_RIGHT);
-
+				currDevices->currMotors.stop();
 				// Roadsign detected, it switches to next mode
 				currentmode = nextmode;
 				roadsigndetected = 0;
@@ -123,7 +118,6 @@ int NavMode::runMode(void)
 			}
 		}
 		//break;
-
 
 		wait_ms(10);//40
 	} // end while

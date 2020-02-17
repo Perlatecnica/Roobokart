@@ -47,6 +47,8 @@ public:
 
     DigitalIn *usrButton;
 
+
+
     bool roadsignDetected(float cfrontIRvalue);
 
     void setSPDirection(float spd);
@@ -55,11 +57,14 @@ public:
     int getRedThreshold();
     int getGreenThreshold();
     void setGreenThreshold(int greent);
+    void buzz(int period_us, float dutycycle, int time);
 
 private:
     float setPointDirection;
     int redthreshold;
     int greenthreshold;
+    // Onboard buzzer
+    PwmOut *Buzzer;
 };
 
 #endif

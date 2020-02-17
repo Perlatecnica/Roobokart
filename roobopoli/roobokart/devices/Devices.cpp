@@ -34,6 +34,7 @@ Devices::Devices(Serial* ser){
 	mems = new MEMS_IKS01A2();
 	mems->init(IKS01A2_I2C_SDA, IKS01A2_I2C_SCL, IKS01A2_INT1, IKS01A2_INT2);
 	mems->setODR(155);
+	Buzzer = new PwmOut(BUZZER_PIN);
 }
 
 
@@ -67,4 +68,11 @@ void Devices::setGreenThreshold(int greent){
 
 int Devices::getGreenThreshold(){
 	return greenthreshold;
+}
+
+void Devices::buzz(int period_us, float dutycycle, int time){
+	Buzzer->period_us(7633);
+	Buzzer->write(0.50f);
+	wait(time);
+	Buzzer->write(0.0f);
 }

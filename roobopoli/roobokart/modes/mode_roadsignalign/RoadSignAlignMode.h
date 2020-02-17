@@ -43,6 +43,12 @@ private:
     float lfrontIR;
     float cfrontIR;
     int8_t direction;
+
+    float setPointYaw;
+    float yaw;
+    int8_t direction_RS;
+    Timer pidtimer_RS;
+    PID *dirPID_RS;
 };
 #endif
 

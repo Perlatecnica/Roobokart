@@ -42,7 +42,6 @@ int TrafficLightMode::runMode(void)
 	currDevices->tof->display(currentmode);
 
 	while(currentmode == mymode){
-		//cfrontIR = currDevices->cfrontIR->read();
 		red = currDevices->color->ReadRed();
 		green = currDevices->color->ReadGreen();
 
@@ -56,9 +55,7 @@ int TrafficLightMode::runMode(void)
 			currDevices->currMotors.run(0, 35, MOTOR_LEFT , MOTOR_RIGHT);
 			wait_ms(500);
 			break;
-		} //else {
-//			currDevices->currMotors.run(0, 35, MOTOR_LEFT , MOTOR_RIGHT);//25
-//		}
+		}
 	}
 
 	return currentmode;

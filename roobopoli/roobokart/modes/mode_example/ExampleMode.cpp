@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "../../../roobokart/modes/mode_nav_stop/NavModeStop.h"
+#include "../mode_example/ExampleMode.h"
 
 // Constructor
 NavModeStop::NavModeStop(Serial* ser,Devices* devices,int yourmode, Planning *planning)

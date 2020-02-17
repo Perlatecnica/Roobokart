@@ -16,7 +16,7 @@
 #include "roobopoli/roobokart/devices/Devices.h"
 #include "roobopoli/roobokart/modes/mode_cross/CrossMode.h"
 #include "roobopoli/roobokart/modes/mode_nav/NavMode.h"
-#include "roobopoli/roobokart/modes/mode_nav_stop/NavModeStop.h"
+#include "roobopoli/roobokart/modes/mode_example/ExampleMode.h"
 #include "roobopoli/roobokart/modes/mode_obstacles/ObstaclesMode.h"
 #include "roobopoli/roobokart/modes/mode_post/PostMode.h"
 #include "roobopoli/roobokart/modes/mode_roadsignalign/RoadSignAlignMode.h"
@@ -41,16 +41,23 @@ ObstaclesMode obstmode(&pc,&devices, OBSTACLES_MANAGEMENT_MODE, &planning);
 NavModeStop navmodestop(&pc,&devices, NAV_MODE_STOP, &planning);
 
 
+
 int main() {
 	//It changes baudrate
 	pc.baud(9600);
+	pc.printf("ROOBOKART v1.1.0\r\n");
 
 	currentmode = planning.SetCurrentMode(RESET_MODE);
 
+
 	while(true) {
 
-#ifdef DEBUG_MAIN
-		pc.printf("Main: It works!\r\n");
+#ifdef DEBUG_PROXIMITY
+		currentmode = -1; // It stops the state machine
+		// The measurements of both the sensors will print on serial com
+		devices.tof->getLeftMeasure();
+		devices.tof->getRightMeasure();
+		wait_ms(300);
 #endif
 
 		switch(currentmode){
