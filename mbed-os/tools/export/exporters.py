@@ -1,15 +1,36 @@
-"""Just a template for subclassing"""
+"""
+Copyright (c) 2016-2019 ARM Limited. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import os
 from abc import abstractmethod, ABCMeta
 import logging
-from os.path import join, dirname, relpath, basename, realpath, normpath
+from os.path import join, dirname, relpath, basename, realpath, normpath, exists
 from itertools import groupby
 from jinja2 import FileSystemLoader, StrictUndefined
 from jinja2.environment import Environment
 import copy
 
 from tools.targets import TARGET_MAP
+from tools.utils import mkdir
+from tools.resources import FileType, FileRef
+from future.utils import with_metaclass
 
+"""Just a template for subclassing"""
 
 class TargetNotSupportedException(Exception):
     """Indicates that an IDE does not support a particular MCU"""
@@ -37,22 +58,22 @@ def deprecated_exporter(CLS):
     CLS.NAME = "%s (DEPRECATED)" % old_name
     return CLS
 
-class Exporter(object):
+class Exporter(with_metaclass(ABCMeta, object)):
     """Exporter base class
 
     This class is meant to be extended by individual exporters, and provides a
     few helper methods for implementing an exporter with either jinja2 or
     progen.
     """
-    __metaclass__ = ABCMeta
     TEMPLATE_DIR = dirname(__file__)
     DOT_IN_RELATIVE_PATH = False
     NAME = None
     TARGETS = set()
     TOOLCHAIN = None
+    CLEAN_FILES = ("GettingStarted.html",)
 
 
-    def __init__(self, target, export_dir, project_name, toolchain,
+    def __init__(self, target, export_dir, project_name, toolchain, zip,
                  extra_symbols=None, resources=None):
         """Initialize an instance of class exporter
         Positional arguments:
@@ -60,6 +81,7 @@ class Exporter(object):
         export_dir    - the directory of the exported project files
         project_name  - the name of the project
         toolchain     - an instance of class toolchain
+        zip           - True if the exported project will be zipped
 
         Keyword arguments:
         extra_symbols - a list of extra macros for the toolchain
@@ -71,11 +93,21 @@ class Exporter(object):
         self.toolchain = toolchain
         jinja_loader = FileSystemLoader(os.path.dirname(os.path.abspath(__file__)))
         self.jinja_environment = Environment(loader=jinja_loader)
+        resources.win_to_unix()
         self.resources = resources
+        self.zip = zip
         self.generated_files = []
+        getting_started_name = "GettingStarted.html"
+        dot_mbed_name = ".mbed"
         self.static_files = (
-            join(self.TEMPLATE_DIR, "GettingStarted.html"),
-            join(self.TEMPLATE_DIR, ".mbed"),
+            FileRef(
+                getting_started_name,
+                join(self.TEMPLATE_DIR, getting_started_name)
+            ),
+            FileRef(
+                dot_mbed_name,
+                join(self.TEMPLATE_DIR, dot_mbed_name)
+            ),
         )
         self.builder_files_dict = {}
         self.add_config()
@@ -85,12 +117,8 @@ class Exporter(object):
         return self.TOOLCHAIN
 
     def add_config(self):
-        """Add the containgin directory of mbed_config.h to include dirs"""
-        config = self.toolchain.get_config_header()
-        if config:
-            self.resources.inc_dirs.append(
-                dirname(relpath(config,
-                                self.resources.file_basepath[config])))
+        """Add the containing directory of mbed_config.h to include dirs"""
+        pass
 
     @property
     def flags(self):
@@ -102,9 +130,7 @@ class Exporter(object):
         asm_flags    - assembler flags
         common_flags - common options
         """
-        config_header = self.toolchain.get_config_header()
-        flags = {key + "_flags": copy.deepcopy(value) for key, value
-                 in self.toolchain.flags.iteritems()}
+        flags = self.toolchain_flags(self.toolchain)
         asm_defines = self.toolchain.get_compile_options(
             self.toolchain.get_symbols(for_asm=True),
             filter(None, self.resources.inc_dirs),
@@ -113,13 +139,60 @@ class Exporter(object):
         flags['asm_flags'] += asm_defines
         flags['c_flags'] += c_defines
         flags['cxx_flags'] += c_defines
+        config_header = self.config_header_ref
         if config_header:
-            config_header = relpath(config_header,
-                                    self.resources.file_basepath[config_header])
-            flags['c_flags'] += self.toolchain.get_config_option(config_header)
-            flags['cxx_flags'] += self.toolchain.get_config_option(
-                config_header)
+            config_option = self.toolchain.get_config_option(
+                config_header.name)
+            flags['c_flags'] += config_option
+            flags['cxx_flags'] += config_option
         return flags
+
+    @property
+    def libraries(self):
+        return [l for l in self.resources.get_file_names(FileType.LIB)
+                if l.endswith(self.toolchain.LIBRARY_EXT)]
+
+    @property
+    def hex_files(self):
+        """Returns a list of hex files to include in the exported project"""
+        hex_files = self.resources.hex_files
+        if hasattr(self.toolchain.target, 'hex_filename'):
+            hex_filename = self.toolchain.target.hex_filename
+            hex_files = [f for f in hex_files if basename(f) == hex_filename]
+        return hex_files
+
+    def toolchain_flags(self, toolchain):
+        """Returns a dictionary of toolchain flags.
+        Keys of the dictionary are:
+        cxx_flags    - c++ flags
+        c_flags      - c flags
+        ld_flags     - linker flags
+        asm_flags    - assembler flags
+        common_flags - common options
+
+        The difference from the above is that it takes a parameter.
+        """
+        flags = {key + "_flags": copy.deepcopy(value) for key, value
+                 in toolchain.flags.items()}
+        config_header = self.config_header_ref
+        if config_header:
+            header_options = self.toolchain.get_config_option(
+                config_header.name)
+            flags['c_flags'] += header_options
+            flags['cxx_flags'] += header_options
+        return flags
+
+    @property
+    def config_header_ref(self):
+        config_header = self.toolchain.get_config_header()
+        if config_header:
+            def is_config_header(f):
+                return f.path == config_header
+            return list(filter(
+                is_config_header, self.resources.get_file_refs(FileType.HEADER)
+            ))[0]
+        else:
+            return None
 
     def get_source_paths(self):
         """Returns a list of the directories where source files are contained"""
@@ -130,7 +203,37 @@ class Exporter(object):
             source_files.extend(getattr(self.resources, key))
         return list(set([os.path.dirname(src) for src in source_files]))
 
+    def gen_file_dest(self, target_file):
+        """Generate the project file location in an exported project"""
+        return join(self.export_dir, target_file)
+
     def gen_file(self, template_file, data, target_file, **kwargs):
+        """Generates a project file from a template using jinja"""
+        target_text = self._gen_file_inner(template_file, data, target_file, **kwargs)
+        target_path = self.gen_file_dest(target_file)
+        mkdir(dirname(target_path))
+        logging.debug("Generating: %s", target_path)
+        open(target_path, "w").write(target_text)
+        self.generated_files += [FileRef(target_file, target_path)]
+
+    def gen_file_nonoverwrite(self, template_file, data, target_file, **kwargs):
+        """Generates or selectively appends a project file from a template"""
+        target_text = self._gen_file_inner(template_file, data, target_file, **kwargs)
+        target_path = self.gen_file_dest(target_file)
+        if exists(target_path):
+            with open(target_path) as fdin:
+                old_lines_set = set(fdin.read().splitlines())
+            target_set = set(target_text.splitlines())
+            to_append = target_set - old_lines_set
+            if len(to_append) > 0:
+                with open(target_path, "a") as fdout:
+                    fdout.write("\n".join(to_append))
+        else:
+            logging.debug("Generating: %s", target_path)
+            open(target_path, "w").write(target_text)
+        self.generated_files += [FileRef(template_file, target_path)]
+
+    def _gen_file_inner(self, template_file, data, target_file, **kwargs):
         """Generates a project file from a template using jinja"""
         jinja_loader = FileSystemLoader(
             os.path.dirname(os.path.abspath(__file__)))
@@ -139,19 +242,19 @@ class Exporter(object):
 
         template = jinja_environment.get_template(template_file)
         target_text = template.render(data)
+        return target_text
 
         target_path = join(self.export_dir, target_file)
         logging.debug("Generating: %s", target_path)
         open(target_path, "w").write(target_text)
-        self.generated_files += [target_path]
+        self.generated_files += [FileRef(target_file, target_path)]
 
     def make_key(self, src):
         """From a source file, extract group name
         Positional Arguments:
         src - the src's location
         """
-        rel_path = relpath(src, self.resources.file_basepath[src])
-        path_list = os.path.normpath(rel_path).split(os.sep)
+        path_list = os.path.normpath(src).split(os.sep)
         assert len(path_list) >= 1
         if len(path_list) == 1:
             key = self.project_name
@@ -189,12 +292,28 @@ class Exporter(object):
 
         Returns -1 on failure and 0 on success
         """
-        raise NotImplemented("Implement in derived Exporter class.")
+        raise NotImplementedError("Implement in derived Exporter class.")
+
+    @staticmethod
+    def clean(project_name):
+        """Clean a previously exported project
+        This method is assumed to be executed at the same level as exporter
+        project files and project source code.
+        See uvision/__init__.py, iar/__init__.py, and makefile/__init__.py for
+        example implemenation.
+
+        Positional Arguments:
+        project_name - the name of the project to build; often required by
+        exporter's build command.
+
+        Returns nothing. May raise exceptions
+        """
+        raise NotImplementedError("Implement in derived Exporter class.")
 
     @abstractmethod
     def generate(self):
         """Generate an IDE/tool specific project file"""
-        raise NotImplemented("Implement a generate function in Exporter child class")
+        raise NotImplementedError("Implement a generate function in Exporter child class")
 
     @classmethod
     def is_target_supported(cls, target_name):
@@ -212,7 +331,21 @@ class Exporter(object):
 
     @classmethod
     def all_supported_targets(cls):
-        return [t for t in TARGET_MAP.keys() if cls.is_target_supported(t)]
+        return [t for t in list(TARGET_MAP) if cls.is_target_supported(t)]
+
+    @staticmethod
+    def filter_dot(str):
+        """
+        Remove the './' or '.\\' prefix, if present.
+        """
+        if str == None:
+            return None
+        if str[:2] == './':
+            return str[2:]
+        if str[:2] == '.\\':
+            return str[2:]
+        return str
+
 
 
 def apply_supported_whitelist(compiler, whitelist, target):

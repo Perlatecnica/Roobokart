@@ -82,10 +82,17 @@ typedef enum {
     // Cellular modem (a DCE)
     MDMPWRON  = PE_14,   // Power (active high)
     MDMRST    = PB_5,    // Reset (active low)
+#if defined(TARGET_UBLOX_C030_R41XM)
+    MDMTXD    = PA_9,    // Transmit Data
+    MDMRXD    = PA_10,    // Receive Data
+    MDMCTS    = PA_11,    // Clear to Send
+    MDMRTS    = PA_12,    // Request to Send
+#else
     MDMTXD    = PD_5,    // Transmit Data
     MDMRXD    = PD_6,    // Receive Data
     MDMCTS    = PD_3,    // Clear to Send
     MDMRTS    = PD_4,    // Request to Send
+#endif
     MDMDCD    = NC,      // DCD line not connected
     MDMDSR    = NC,      // DSR line not connected
     MDMDTR    = NC,      // DTR line not connected
@@ -111,7 +118,11 @@ typedef enum {
     D1      = PD_8,   // UART3-TX
     D2      = PD_11,  // UART3-CTS
     D3      = PB_14,  // UART3-RTS
+#if defined(TARGET_UBLOX_C030_N211) || defined(TARGET_UBLOX_C030_R410M) || defined(TARGET_UBLOX_C030_U201)
     D4      = PB_1,
+#else
+    D4      = PC_8,
+#endif
     D5      = PA_5,
     D6      = PB_8,   // UART3-CTS
     D7      = PB_15,  // UART3-RTS
@@ -123,13 +134,22 @@ typedef enum {
     D13     = PE_2,   // SCK
     D14     = PB_7,   // SDA
     D15     = PB_6,   // SCL
+
+    // ADC internal channels
+    ADC_TEMP = 0xF0,
+    ADC_VREF = 0xF1,
+    ADC_VBAT = 0xF2,
+
     // Internal
     LED1    = PE_3,   // Red / Mode
     LED2    = PE_4,   // Green / Switch-1
     LED3    = PE_1,   // Blue
     LED4    = PE_7,   // A definition is required by the mbed platform RTC test code, this is the Ethernet connector yellow LED
     LED_RED = LED1,
+    LED_GREEN = LED2,
+    LED_BLUE  = LED3,
     SW0     = PC_13,  // Switch-0
+    BUTTON1 = SW0,    // Standardized button names
 
     // Arduino header I2C
     I2C_SDA = D14,
@@ -145,9 +165,29 @@ typedef enum {
     SPI_CLK     = D13,
     SPI_NSS     = D10,
 
+    // STDIO for console print
+#ifdef MBED_CONF_TARGET_STDIO_UART_TX
+    STDIO_UART_TX = MBED_CONF_TARGET_STDIO_UART_TX,
+#else
+#if defined(TARGET_UBLOX_C030_R41XM)
+    STDIO_UART_TX = PD_5,
+#else
+    STDIO_UART_TX = PA_9,
+#endif
+#endif
+#ifdef MBED_CONF_TARGET_STDIO_UART_RX
+    STDIO_UART_RX = MBED_CONF_TARGET_STDIO_UART_RX,
+#else
+#if defined(TARGET_UBLOX_C030_R41XM)
+    STDIO_UART_RX = PD_6,
+#else
+    STDIO_UART_RX = PA_10,
+#endif	
+#endif
+
     // ST-Link
-    USBRX   = PA_10,
-    USBTX   = PA_9,
+    USBRX   = STDIO_UART_RX,
+    USBTX   = STDIO_UART_TX,
     SWDIO   = PA_13, 
     SWCLK   = PA_14, 
     NTRST   = PB_4,  

@@ -14,10 +14,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from __future__ import print_function
 
 from sys import stdout
 
-class DefaultAuto():
+class DefaultAuto(object):
     """ Simple, basic host test's test runner waiting for serial port
         output from MUT, no supervision over test running in MUT is executed.
     """
@@ -30,7 +31,7 @@ class DefaultAuto():
                     return selftest.RESULT_IO_SERIAL
                 stdout.write(c)
                 stdout.flush()
-        except KeyboardInterrupt, _:
+        except KeyboardInterrupt:
             selftest.notify("\r\n[CTRL+C] exit")
             result = selftest.RESULT_ERROR
         return result

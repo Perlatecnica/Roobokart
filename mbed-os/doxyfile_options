@@ -32,7 +32,7 @@ DOXYFILE_ENCODING      = UTF-8
 # title of most generated pages and in a few other places.
 # The default value is: My Project.
 
-PROJECT_NAME           = "My Project"
+PROJECT_NAME           = "Mbed OS Reference"
 
 # The PROJECT_NUMBER tag can be used to enter a project or revision number. This
 # could be handy for archiving the generated documentation or if some version
@@ -484,14 +484,14 @@ HIDE_UNDOC_MEMBERS     = YES
 # has no effect if EXTRACT_ALL is enabled.
 # The default value is: NO.
 
-HIDE_UNDOC_CLASSES     = YES
+HIDE_UNDOC_CLASSES     = NO
 
 # If the HIDE_FRIEND_COMPOUNDS tag is set to YES, doxygen will hide all friend
 # (class|struct|union) declarations. If set to NO, these declarations will be
 # included in the documentation.
 # The default value is: NO.
 
-HIDE_FRIEND_COMPOUNDS  = NO
+HIDE_FRIEND_COMPOUNDS  = YES
 
 # If the HIDE_IN_BODY_DOCS tag is set to YES, doxygen will hide any
 # documentation blocks found inside the body of a function. If set to NO, these
@@ -514,7 +514,7 @@ INTERNAL_DOCS          = NO
 # and Mac users are advised to set this option to NO.
 # The default value is: system dependent.
 
-CASE_SENSE_NAMES       = YES
+CASE_SENSE_NAMES       = NO
 
 # If the HIDE_SCOPE_NAMES tag is set to NO then doxygen will show members with
 # their full class and namespace scopes in the documentation. If set to YES, the
@@ -805,7 +805,7 @@ INPUT_ENCODING         = UTF-8
 # *.m, *.markdown, *.md, *.mm, *.dox, *.py, *.pyw, *.f90, *.f95, *.f03, *.f08,
 # *.f, *.for, *.tcl, *.vhd, *.vhdl, *.ucf and *.qsf.
 
-FILE_PATTERNS          = *.h
+FILE_PATTERNS          = *.h DOXYGEN_FRONTPAGE.md
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -841,11 +841,26 @@ EXCLUDE_PATTERNS       = */tools/* \
                          */BUILD/* \
                          */rtos/TARGET_CORTEX/rtx* \
                          */cmsis/* \
-                         */FEATURE_* \
+                         */features/cryptocell/* \
                          */features/mbedtls/* \
-                         */features/storage/* \
                          */features/unsupported/* \
-                         */features/filesystem/* \
+                         */features/lwipstack/* \
+                         */features/nanostack/sal-stack-nanostack/* \
+                         */features/nanostack/coap-service/* \
+                         */features/netsocket/emac-drivers/* \
+                         */mbed-trace/* \
+                         */mbed-coap/* \
+                         */nanostack-libservice/* \
+                         */mbed-client-randlib/* \
+                         */nanostack/sal-stack-nanostack-eventloop/* \
+                         */ble/generic/* \
+                         */ble/pal/* \
+                         */components/802.15.4_RF/* \
+                         */components/wifi/* \
+                         */UNITTESTS/* \
+                         */features/cellular/framework/AT/* \
+                         */features/cellular/framework/device/* \
+                         */features/cellular/framework/common/*
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
@@ -938,7 +953,7 @@ FILTER_SOURCE_PATTERNS =
 # (index.html). This can be useful if you have a project on for instance GitHub
 # and want to reuse the introduction page also for the doxygen output.
 
-USE_MDFILE_AS_MAINPAGE = 
+USE_MDFILE_AS_MAINPAGE = DOXYGEN_FRONTPAGE.md
 
 #---------------------------------------------------------------------------
 # Configuration options related to source browsing
@@ -1417,7 +1432,7 @@ ECLIPSE_DOC_ID         = org.doxygen.Project
 # The default value is: NO.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-DISABLE_INDEX          = YES
+DISABLE_INDEX          = NO
 
 # The GENERATE_TREEVIEW tag is used to specify whether a tree-like index
 # structure should be generated to display hierarchical information. If the tag
@@ -1548,7 +1563,7 @@ MATHJAX_CODEFILE       =
 # The default value is: YES.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-SEARCHENGINE           = NO
+SEARCHENGINE           = YES
 
 # When the SERVER_BASED_SEARCH tag is enabled the search engine will be
 # implemented using a web server instead of a web client using Javascript. There
@@ -1902,7 +1917,7 @@ MAN_LINKS              = NO
 # captures the structure of the code including all documentation.
 # The default value is: NO.
 
-GENERATE_XML           = YES
+GENERATE_XML           = NO
 
 # The XML_OUTPUT tag is used to specify where the XML pages will be put. If a
 # relative path is entered the value of OUTPUT_DIRECTORY will be put in front of
@@ -1910,7 +1925,7 @@ GENERATE_XML           = YES
 # The default directory is: xml.
 # This tag requires that the tag GENERATE_XML is set to YES.
 
-XML_OUTPUT             = BUILD/xml
+XML_OUTPUT             = xml
 
 # If the XML_PROGRAMLISTING tag is set to YES, doxygen will dump the program
 # listings (including syntax highlighting and cross-referencing information) to
@@ -2059,6 +2074,7 @@ PREDEFINED             = DOXYGEN_ONLY            \
                          DEVICE_ANALOGIN         \
                          DEVICE_ANALOGOUT        \
                          DEVICE_CAN              \
+                         DEVICE_CRC              \
                          DEVICE_ETHERNET         \
                          DEVICE_EMAC             \
                          DEVICE_FLASH            \
@@ -2066,11 +2082,14 @@ PREDEFINED             = DOXYGEN_ONLY            \
                          DEVICE_I2CSLAVE         \
                          DEVICE_I2C_ASYNCH       \
                          DEVICE_INTERRUPTIN      \
-                         DEVICE_LOWPOWERTIMER    \
+                         DEVICE_ITM              \
+                         DEVICE_LPTICKER         \
+                         DEVICE_MPU              \
                          DEVICE_PORTIN           \
                          DEVICE_PORTINOUT        \
                          DEVICE_PORTOUT          \
                          DEVICE_PWMOUT           \
+                         DEVICE_RESET_REASON     \
                          DEVICE_RTC              \
                          DEVICE_TRNG             \
                          DEVICE_SERIAL           \
@@ -2080,9 +2099,29 @@ PREDEFINED             = DOXYGEN_ONLY            \
                          DEVICE_SPI              \
                          DEVICE_SPI_ASYNCH       \
                          DEVICE_SPISLAVE         \
+                         DEVICE_QSPI             \
                          DEVICE_STORAGE          \
+                         DEVICE_WATCHDOG         \
+                         COMPONENT_SPE           \
+                         COMPONENT_SPM_MAILBOX   \
+                         "TFM_LVL=1" \
                          "MBED_DEPRECATED_SINCE(d, m)=" \
-                         "MBED_ENABLE_IF_CALLBACK_COMPATIBLE(F, M)="
+                         "MBED_ENABLE_IF_CALLBACK_COMPATIBLE(F, M)=" \
+                         "MBED_DEPRECATED(s)=" \
+                         "BLE_ROLE_OBSERVER=1" \
+                         "BLE_ROLE_BROADCASTER=1" \
+                         "BLE_ROLE_PERIPHERAL=1" \
+                         "BLE_ROLE_CENTRAL=1" \
+                         "BLE_FEATURE_GATT_CLIENT=1" \
+                         "BLE_FEATURE_GATT_SERVER=1" \
+                         "BLE_FEATURE_SECURITY=1" \
+                         "BLE_FEATURE_SECURE_CONNECTIONS=1" \
+                         "BLE_FEATURE_SIGNING=1" \
+                         "BLE_FEATURE_PHY_MANAGEMENT=1" \
+                         "BLE_FEATURE_WHITELIST=1" \
+                         "BLE_FEATURE_PRIVACY=1" \
+                         "BLE_FEATURE_PERIODIC_ADVERTISING=1" \
+                         "BLE_FEATURE_EXTENDED_ADVERTISING=1"
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The
@@ -2166,7 +2205,7 @@ PERL_PATH              = /usr/bin/perl
 # powerful graphs.
 # The default value is: YES.
 
-CLASS_DIAGRAMS         = NO
+CLASS_DIAGRAMS         = YES
 
 # You can define message sequence charts within doxygen comments using the \msc
 # command. Doxygen will then run the mscgen tool (see:

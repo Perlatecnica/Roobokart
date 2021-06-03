@@ -1,5 +1,5 @@
 /* mbed Microcontroller Library
- * Copyright (c) 2006-2012 ARM Limited
+ * Copyright (c) 2006-2019 ARM Limited
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,14 +25,23 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "cmsis_os2.h"
-#include "mbed_rtos1_types.h"
-#include "mbed_rtos_storage.h"
+#include "rtos/mbed_rtos_types.h"
+#include "rtos/mbed_rtos1_types.h"
+#include "rtos/mbed_rtos_storage.h"
 #include "platform/NonCopyable.h"
+#include "platform/mbed_assert.h"
+#include "Kernel.h"
 
+
+#if MBED_CONF_RTOS_PRESENT || defined(DOXYGEN_ONLY)
 namespace rtos {
-/** \addtogroup rtos */
+/** \addtogroup rtos-public-api */
 /** @{*/
+
+/**
+ * \defgroup rtos_MemoryPool MemoryPool class
+ * @{
+ */
 
 /** Define and manage fixed-size memory pools of objects of a given type.
   @tparam  T         data type of a single object (element).
@@ -44,39 +53,121 @@ namespace rtos {
 */
 template<typename T, uint32_t pool_sz>
 class MemoryPool : private mbed::NonCopyable<MemoryPool<T, pool_sz> > {
-	MBED_STATIC_ASSERT(pool_sz > 0, "Invalid memory pool size. Must be greater than 0.");
+    MBED_STATIC_ASSERT(pool_sz > 0, "Invalid memory pool size. Must be greater than 0.");
 public:
-    /** Create and Initialize a memory pool. */
-    MemoryPool() {
+    /** Create and Initialize a memory pool.
+     *
+     * @note You cannot call this function from ISR context.
+    */
+    MemoryPool()
+    {
         memset(_pool_mem, 0, sizeof(_pool_mem));
-        memset(&_obj_mem, 0, sizeof(_obj_mem));
-        memset(&_attr, 0, sizeof(_attr));
-        _attr.mp_mem = _pool_mem;
-        _attr.mp_size = sizeof(_pool_mem);
-        _attr.cb_mem = &_obj_mem;
-        _attr.cb_size = sizeof(_obj_mem);
-        _id = osMemoryPoolNew(pool_sz, sizeof(T), &_attr);
+        osMemoryPoolAttr_t attr = { 0 };
+        attr.mp_mem = _pool_mem;
+        attr.mp_size = sizeof(_pool_mem);
+        attr.cb_mem = &_obj_mem;
+        attr.cb_size = sizeof(_obj_mem);
+        _id = osMemoryPoolNew(pool_sz, sizeof(T), &attr);
         MBED_ASSERT(_id);
     }
 
-    /** Destroy a memory pool */
-    ~MemoryPool() {
+    /** Destroy a memory pool
+     *
+     * @note You cannot call this function from ISR context.
+    */
+    ~MemoryPool()
+    {
         osMemoryPoolDelete(_id);
     }
 
-    /** Allocate a memory block of type T from a memory pool.
-      @return  address of the allocated memory block or NULL in case of no memory available.
+    /** Allocate a memory block from a memory pool, without blocking.
+      @return  address of the allocated memory block or nullptr in case of no memory available.
+
+      @note You may call this function from ISR context.
     */
-    T* alloc(void) {
-        return (T*)osMemoryPoolAlloc(_id, 0);
+    T *alloc(void)
+    {
+        return (T *)osMemoryPoolAlloc(_id, 0);
     }
 
-    /** Allocate a memory block of type T from a memory pool and set memory block to zero.
-      @return  address of the allocated memory block or NULL in case of no memory available.
+    /** Allocate a memory block from a memory pool, optionally blocking.
+      @param   millisec  timeout value (osWaitForever to wait forever)
+      @return  address of the allocated memory block or nullptr in case of no memory available.
+
+      @note You may call this function from ISR context if the millisec parameter is set to 0.
     */
-    T* calloc(void) {
-        T *item = (T*)osMemoryPoolAlloc(_id, 0);
-        if (item != NULL) {
+    T *alloc_for(uint32_t millisec)
+    {
+        return (T *)osMemoryPoolAlloc(_id, millisec);
+    }
+
+    /** Allocate a memory block from a memory pool, blocking.
+      @param   millisec absolute timeout time, referenced to Kernel::get_ms_count().
+      @return  address of the allocated memory block or nullptr in case of no memory available.
+
+      @note You cannot call this function from ISR context.
+      @note the underlying RTOS may have a limit to the maximum wait time
+        due to internal 32-bit computations, but this is guaranteed to work if the
+        wait is <= 0x7fffffff milliseconds (~24 days). If the limit is exceeded,
+        the wait will time out earlier than specified.
+    */
+    T *alloc_until(uint64_t millisec)
+    {
+        uint64_t now = Kernel::get_ms_count();
+        uint32_t delay;
+        if (now >= millisec) {
+            delay = 0;
+        } else if (millisec - now >= osWaitForever) {
+            delay = osWaitForever - 1;
+        } else {
+            delay = millisec - now;
+        }
+        return alloc_for(delay);
+    }
+
+    /** Allocate a memory block from a memory pool, without blocking, and set memory block to zero.
+      @return  address of the allocated memory block or nullptr in case of no memory available.
+
+      @note You may call this function from ISR context.
+    */
+    T *calloc(void)
+    {
+        T *item = alloc();
+        if (item != nullptr) {
+            memset(item, 0, sizeof(T));
+        }
+        return item;
+    }
+
+    /** Allocate a memory block from a memory pool, optionally blocking, and set memory block to zero.
+      @param   millisec  timeout value (osWaitForever to wait forever)
+      @return  address of the allocated memory block or nullptr in case of no memory available.
+
+      @note You may call this function from ISR context if the millisec parameter is set to 0.
+    */
+    T *calloc_for(uint32_t millisec)
+    {
+        T *item = alloc_for(millisec);
+        if (item != nullptr) {
+            memset(item, 0, sizeof(T));
+        }
+        return item;
+    }
+
+    /** Allocate a memory block from a memory pool, blocking, and set memory block to zero.
+      @param   millisec absolute timeout time, referenced to Kernel::get_ms_count().
+      @return  address of the allocated memory block or nullptr in case of no memory available.
+
+      @note You cannot call this function from ISR context.
+      @note the underlying RTOS may have a limit to the maximum wait time
+        due to internal 32-bit computations, but this is guaranteed to work if the
+        wait is <= 0x7fffffff milliseconds (~24 days). If the limit is exceeded,
+        the wait will time out earlier than specified.
+    */
+    T *calloc_until(uint64_t millisec)
+    {
+        T *item = alloc_until(millisec);
+        if (item != nullptr) {
             memset(item, 0, sizeof(T));
         }
         return item;
@@ -85,23 +176,23 @@ public:
     /** Free a memory block.
       @param   block  address of the allocated memory block to be freed.
       @return         osOK on successful deallocation, osErrorParameter if given memory block id
-                      is NULL or invalid, or osErrorResource if given memory block is in an
+                      is nullptr or invalid, or osErrorResource if given memory block is in an
                       invalid memory pool state.
 
+      @note You may call this function from ISR context.
     */
-    osStatus free(T *block) {
-        return osMemoryPoolFree(_id, (void*)block);
+    osStatus free(T *block)
+    {
+        return osMemoryPoolFree(_id, block);
     }
 
 private:
     osMemoryPoolId_t             _id;
-    osMemoryPoolAttr_t           _attr;
-    /* osMemoryPoolNew requires that pool block size is a multiple of 4 bytes. */
-    char                         _pool_mem[((sizeof(T) + 3) & ~3) * pool_sz];
+    char                         _pool_mem[MBED_RTOS_STORAGE_MEM_POOL_MEM_SIZE(pool_sz, sizeof(T))];
     mbed_rtos_storage_mem_pool_t _obj_mem;
 };
-
+/** @}*/
+/** @}*/
 }
 #endif
-
-/** @}*/
+#endif

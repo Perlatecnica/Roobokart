@@ -1,8 +1,15 @@
 /* Linker script to configure memory regions. */
+
+#if !defined(MBED_BOOT_STACK_SIZE)
+    #define MBED_BOOT_STACK_SIZE 0x400
+#endif
+
+STACK_SIZE = MBED_BOOT_STACK_SIZE;
+
 MEMORY
 { 
   FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 256K
-  RAM (rwx)  : ORIGIN = 0x20000194, LENGTH = 64k - 0x194
+  RAM (rwx)  : ORIGIN = 0x20000198, LENGTH = 64k - 0x198
 }
 
 /* Linker script to place sections and symbol values. Should be used together
@@ -84,13 +91,13 @@ SECTIONS
         *(vtable)
         *(.data*)
 
-        . = ALIGN(4);
+        . = ALIGN(8);
         /* preinit data */
         PROVIDE_HIDDEN (__preinit_array_start = .);
         KEEP(*(.preinit_array))
         PROVIDE_HIDDEN (__preinit_array_end = .);
 
-        . = ALIGN(4);
+        . = ALIGN(8);
         /* init data */
         PROVIDE_HIDDEN (__init_array_start = .);
         KEEP(*(SORT(.init_array.*)))
@@ -98,7 +105,7 @@ SECTIONS
         PROVIDE_HIDDEN (__init_array_end = .);
 
 
-        . = ALIGN(4);
+        . = ALIGN(8);
         /* finit data */
         PROVIDE_HIDDEN (__fini_array_start = .);
         KEEP(*(SORT(.fini_array.*)))
@@ -106,7 +113,7 @@ SECTIONS
         PROVIDE_HIDDEN (__fini_array_end = .);
 
         KEEP(*(.jcr*))
-        . = ALIGN(4);
+        . = ALIGN(8);
         /* All data end */
         __data_end__ = .;
         _edata = .;
@@ -115,12 +122,12 @@ SECTIONS
 
     .bss :
     {
-        . = ALIGN(4);
+        . = ALIGN(8);
         __bss_start__ = .;
         _sbss = .;
         *(.bss*)
         *(COMMON)
-        . = ALIGN(4);
+        . = ALIGN(8);
         __bss_end__ = .;
         _ebss = .;
     } > RAM
@@ -130,6 +137,7 @@ SECTIONS
         __end__ = .;
         end = __end__;
         *(.heap*)
+        . = ORIGIN(RAM) + LENGTH(RAM) - STACK_SIZE;
         __HeapLimit = .;
     } > RAM
 
@@ -145,7 +153,7 @@ SECTIONS
      * size of stack_dummy section */
     __StackTop = ORIGIN(RAM) + LENGTH(RAM);
     _estack = __StackTop;
-    __StackLimit = __StackTop - SIZEOF(.stack_dummy);
+    __StackLimit = __StackTop - STACK_SIZE;
     PROVIDE(__stack = __StackTop);
 
     /* Check if data + heap + stack exceeds RAM limit */

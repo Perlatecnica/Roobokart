@@ -2,8 +2,6 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_rtc.h
   * @author  MCD Application Team
-  * @version V1.7.1
-  * @date    14-April-2017
   * @brief   Header file of RTC HAL module.
   ******************************************************************************
   * @attention
@@ -45,6 +43,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal_def.h"
+#include "stm32f4xx_ll_rtc.h"
 
 /** @addtogroup STM32F4xx_HAL_Driver
   * @{
@@ -424,14 +423,14 @@ typedef struct
   */
 
 /** @brief Reset RTC handle state
-  * @param  __HANDLE__: specifies the RTC handle.
+  * @param  __HANDLE__ specifies the RTC handle.
   * @retval None
   */
 #define __HAL_RTC_RESET_HANDLE_STATE(__HANDLE__) ((__HANDLE__)->State = HAL_RTC_STATE_RESET)
 
 /**
   * @brief  Disable the write protection for RTC registers.
-  * @param  __HANDLE__: specifies the RTC handle.
+  * @param  __HANDLE__ specifies the RTC handle.
   * @retval None
   */
 #define __HAL_RTC_WRITEPROTECTION_DISABLE(__HANDLE__)             \
@@ -442,7 +441,7 @@ typedef struct
 
 /**
   * @brief  Enable the write protection for RTC registers.
-  * @param  __HANDLE__: specifies the RTC handle.
+  * @param  __HANDLE__ specifies the RTC handle.
   * @retval None
   */
 #define __HAL_RTC_WRITEPROTECTION_ENABLE(__HANDLE__)              \
@@ -452,36 +451,36 @@ typedef struct
  
 /**
   * @brief  Enable the RTC ALARMA peripheral.
-  * @param  __HANDLE__: specifies the RTC handle.
+  * @param  __HANDLE__ specifies the RTC handle.
   * @retval None
   */
 #define __HAL_RTC_ALARMA_ENABLE(__HANDLE__)                           ((__HANDLE__)->Instance->CR |= (RTC_CR_ALRAE))
 
 /**
   * @brief  Disable the RTC ALARMA peripheral.
-  * @param  __HANDLE__: specifies the RTC handle.
+  * @param  __HANDLE__ specifies the RTC handle.
   * @retval None
   */
 #define __HAL_RTC_ALARMA_DISABLE(__HANDLE__)                          ((__HANDLE__)->Instance->CR &= ~(RTC_CR_ALRAE))
 
 /**
   * @brief  Enable the RTC ALARMB peripheral.
-  * @param  __HANDLE__: specifies the RTC handle.
+  * @param  __HANDLE__ specifies the RTC handle.
   * @retval None
   */
 #define __HAL_RTC_ALARMB_ENABLE(__HANDLE__)                           ((__HANDLE__)->Instance->CR |= (RTC_CR_ALRBE))
 
 /**
   * @brief  Disable the RTC ALARMB peripheral.
-  * @param  __HANDLE__: specifies the RTC handle.
+  * @param  __HANDLE__ specifies the RTC handle.
   * @retval None
   */
 #define __HAL_RTC_ALARMB_DISABLE(__HANDLE__)                          ((__HANDLE__)->Instance->CR &= ~(RTC_CR_ALRBE))
 
 /**
   * @brief  Enable the RTC Alarm interrupt.
-  * @param  __HANDLE__: specifies the RTC handle.
-  * @param  __INTERRUPT__: specifies the RTC Alarm interrupt sources to be enabled or disabled. 
+  * @param  __HANDLE__ specifies the RTC handle.
+  * @param  __INTERRUPT__ specifies the RTC Alarm interrupt sources to be enabled or disabled. 
   *          This parameter can be any combination of the following values:
   *             @arg RTC_IT_ALRA: Alarm A interrupt
   *             @arg RTC_IT_ALRB: Alarm B interrupt  
@@ -491,8 +490,8 @@ typedef struct
 
 /**
   * @brief  Disable the RTC Alarm interrupt.
-  * @param  __HANDLE__: specifies the RTC handle.
-  * @param  __INTERRUPT__: specifies the RTC Alarm interrupt sources to be enabled or disabled. 
+  * @param  __HANDLE__ specifies the RTC handle.
+  * @param  __INTERRUPT__ specifies the RTC Alarm interrupt sources to be enabled or disabled. 
   *         This parameter can be any combination of the following values:
   *            @arg RTC_IT_ALRA: Alarm A interrupt
   *            @arg RTC_IT_ALRB: Alarm B interrupt  
@@ -502,8 +501,8 @@ typedef struct
 
 /**
   * @brief  Check whether the specified RTC Alarm interrupt has occurred or not.
-  * @param  __HANDLE__: specifies the RTC handle.
-  * @param  __INTERRUPT__: specifies the RTC Alarm interrupt to check.
+  * @param  __HANDLE__ specifies the RTC handle.
+  * @param  __INTERRUPT__ specifies the RTC Alarm interrupt to check.
   *         This parameter can be:
   *            @arg RTC_IT_ALRA: Alarm A interrupt
   *            @arg RTC_IT_ALRB: Alarm B interrupt  
@@ -513,8 +512,8 @@ typedef struct
 
 /**
   * @brief  Get the selected RTC Alarm's flag status.
-  * @param  __HANDLE__: specifies the RTC handle.
-  * @param  __FLAG__: specifies the RTC Alarm Flag to check.
+  * @param  __HANDLE__ specifies the RTC handle.
+  * @param  __FLAG__ specifies the RTC Alarm Flag to check.
   *         This parameter can be:
   *            @arg RTC_FLAG_ALRAF
   *            @arg RTC_FLAG_ALRBF
@@ -526,8 +525,8 @@ typedef struct
 
 /**
   * @brief  Clear the RTC Alarm's pending flags.
-  * @param  __HANDLE__: specifies the RTC handle.
-  * @param  __FLAG__: specifies the RTC Alarm Flag sources to be enabled or disabled.
+  * @param  __HANDLE__ specifies the RTC handle.
+  * @param  __FLAG__ specifies the RTC Alarm Flag sources to be enabled or disabled.
   *          This parameter can be:
   *             @arg RTC_FLAG_ALRAF
   *             @arg RTC_FLAG_ALRBF 
@@ -538,8 +537,8 @@ typedef struct
   
 /**
   * @brief  Check whether the specified RTC Alarm interrupt has been enabled or not.
-  * @param  __HANDLE__: specifies the RTC handle.
-  * @param  __INTERRUPT__: specifies the RTC Alarm interrupt sources to check.
+  * @param  __HANDLE__ specifies the RTC handle.
+  * @param  __INTERRUPT__ specifies the RTC Alarm interrupt sources to check.
   *         This parameter can be:
   *            @arg RTC_IT_ALRA: Alarm A interrupt
   *            @arg RTC_IT_ALRB: Alarm B interrupt

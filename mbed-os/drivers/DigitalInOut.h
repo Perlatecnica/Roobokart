@@ -1,5 +1,6 @@
 /* mbed Microcontroller Library
- * Copyright (c) 2006-2013 ARM Limited
+ * Copyright (c) 2006-2019 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,15 +20,17 @@
 #include "platform/platform.h"
 
 #include "hal/gpio_api.h"
-#include "platform/mbed_critical.h"
 
 namespace mbed {
-/** \addtogroup drivers */
+/**
+ * \defgroup drivers_DigitalInOut DigitalInOut class
+ * \ingroup drivers-public-api-gpio
+ * @{
+ */
 
 /** A digital input/output, used for setting or reading a bi-directional pin
  *
  * @note Synchronization level: Interrupt safe
- * @ingroup drivers
  */
 class DigitalInOut {
 
@@ -36,7 +39,8 @@ public:
      *
      *  @param pin DigitalInOut pin to connect to
      */
-    DigitalInOut(PinName pin) : gpio() {
+    DigitalInOut(PinName pin) : gpio()
+    {
         // No lock needed in the constructor
         gpio_init_in(&gpio, pin);
     }
@@ -48,7 +52,8 @@ public:
      *  @param mode the initial mode of the pin
      *  @param value the initial value of the pin if is an output
      */
-    DigitalInOut(PinName pin, PinDirection direction, PinMode mode, int value) : gpio() {
+    DigitalInOut(PinName pin, PinDirection direction, PinMode mode, int value) : gpio()
+    {
         // No lock needed in the constructor
         gpio_init_inout(&gpio, pin, direction, mode, value);
     }
@@ -58,7 +63,8 @@ public:
      *  @param value An integer specifying the pin output value,
      *      0 for logical 0, 1 (or any other non-zero value) for logical 1
      */
-    void write(int value) {
+    void write(int value)
+    {
         // Thread safe / atomic HAL call
         gpio_write(&gpio, value);
     }
@@ -69,36 +75,25 @@ public:
      *    an integer representing the output setting of the pin if it is an output,
      *    or read the input if set as an input
      */
-    int read() {
+    int read()
+    {
         // Thread safe / atomic HAL call
         return gpio_read(&gpio);
     }
 
     /** Set as an output
      */
-    void output() {
-        core_util_critical_section_enter();
-        gpio_dir(&gpio, PIN_OUTPUT);
-        core_util_critical_section_exit();
-    }
+    void output();
 
     /** Set as an input
      */
-    void input() {
-        core_util_critical_section_enter();
-        gpio_dir(&gpio, PIN_INPUT);
-        core_util_critical_section_exit();
-    }
+    void input();
 
     /** Set the input pin mode
      *
      *  @param pull PullUp, PullDown, PullNone, OpenDrain
      */
-    void mode(PinMode pull) {
-        core_util_critical_section_enter();
-        gpio_mode(&gpio, pull);
-        core_util_critical_section_exit();
-    }
+    void mode(PinMode pull);
 
     /** Return the output setting, represented as 0 or 1 (int)
      *
@@ -106,41 +101,58 @@ public:
      *    Non zero value if pin is connected to uc GPIO
      *    0 if gpio object was initialized with NC
      */
-    int is_connected() {
+    int is_connected()
+    {
         // Thread safe / atomic HAL call
         return gpio_is_connected(&gpio);
     }
 
     /** A shorthand for write()
      * \sa DigitalInOut::write()
+     * @code
+     *      DigitalInOut  inout(PIN);
+     *      DigitalIn     button(BUTTON1);
+     *      inout.output();
+     *
+     *      inout = button;     // Equivalent to inout.write(button.read())
+     * @endcode
      */
-    DigitalInOut& operator= (int value) {
+    DigitalInOut &operator= (int value)
+    {
         // Underlying write is thread safe
         write(value);
         return *this;
     }
 
-    /** A shorthand for write()
+    /**A shorthand for write() using the assignment operator which copies the
+     * state from the DigitalInOut argument.
      * \sa DigitalInOut::write()
      */
-    DigitalInOut& operator= (DigitalInOut& rhs) {
-        core_util_critical_section_enter();
-        write(rhs.read());
-        core_util_critical_section_exit();
-        return *this;
-    }
+    DigitalInOut &operator= (DigitalInOut &rhs);
 
     /** A shorthand for read()
      * \sa DigitalInOut::read()
+     * @code
+     *      DigitalInOut inout(PIN);
+     *      DigitalOut led(LED1);
+     *
+     *      inout.input();
+     *      led = inout;   // Equivalent to led.write(inout.read())
+     * @endcode
      */
-    operator int() {
+    operator int()
+    {
         // Underlying call is thread safe
         return read();
     }
 
 protected:
+#if !defined(DOXYGEN_ONLY)
     gpio_t gpio;
+#endif //!defined(DOXYGEN_ONLY)
 };
+
+/** @}*/
 
 } // namespace mbed
 

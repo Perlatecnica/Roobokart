@@ -1,8 +1,6 @@
-
-/** \addtogroup platform */
-/** @{*/
 /* mbed Microcontroller Library
- * Copyright (c) 2006-2013 ARM Limited
+ * Copyright (c) 2006-2019 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +19,16 @@
 
 #include <stdarg.h>
 
+#include "platform/mbed_toolchain.h"
 #include "device.h"
+
+/** \addtogroup platform-public-api */
+/** @{*/
+
+/**
+ * \defgroup platform_interface Network interface and other utility functions
+ * @{
+ */
 
 /* Mbed interface mac address
  * if MBED_MAC_ADD_x are zero, interface uid sets mac address,
@@ -42,11 +49,16 @@ extern "C" {
 
 #if DEVICE_SEMIHOST
 
+/**
+ * \defgroup platform_interface interface functions
+ * @{
+ */
+
 /** Functions to control the mbed interface
  *
  * mbed Microcontrollers have a built-in interface to provide functionality such as
  * drag-n-drop download, reset, serial-over-usb, and access to the mbed local file
- * system. These functions provide means to control the interface suing semihost
+ * system. These functions provide means to control the interface using semihost
  * calls it supports.
  */
 
@@ -110,12 +122,17 @@ void mbed_mac_address(char *mac);
 
 /** Cause the mbed to flash the BLOD (Blue LEDs Of Death) sequence
  */
-void mbed_die(void);
+MBED_NORETURN void mbed_die(void);
 
 /** Print out an error message.  This is typically called when
  * handling a crash.
  *
- * @note Synchronization level: Interrupt safe
+ * @note Synchronization level: Interrupt safe, as long as the
+ *       FileHandle::write of the stderr device is. See mbed_error_puts
+ *       for more information.
+ * @note This uses an internal 128-byte buffer to format the string,
+ *       so the output may be truncated. If you need to write a potentially
+ *       long string, use mbed_error_puts.
  *
  * @param format    C string that contains data stream to be printed.
  *                  Code snippets below show valid format.
@@ -125,18 +142,47 @@ void mbed_die(void);
  * @endcode
  *
  */
-void mbed_error_printf(const char* format, ...);
+void mbed_error_printf(const char *format, ...) MBED_PRINTF(1, 2);
 
 /** Print out an error message.  Similar to mbed_error_printf
  * but uses a va_list.
  *
- * @note Synchronization level: Interrupt safe
+ * @note Synchronization level: Interrupt safe, as long as the
+ *       FileHandle::write of the stderr device is. See mbed_error_puts
+ *       for more information.
  *
  * @param format    C string that contains data stream to be printed.
  * @param arg       Variable arguments list
  *
  */
-void mbed_error_vfprintf(const char * format, va_list arg);
+void mbed_error_vprintf(const char *format, va_list arg) MBED_PRINTF(1, 0);
+
+/** Print out an error message. This is typically called when
+ * handling a crash.
+ *
+ * Unlike mbed_error_printf, there is no limit to the maximum output
+ * length. Unlike standard puts, but like standard fputs, this does not
+ * append a '\n' character.
+ *
+ * @note Synchronization level: Interrupt safe, as long as the
+ *       FileHandle::write of the stderr device is. The default
+ *       serial console is safe, either buffered or not. If the
+ *       console has not previously been initialized, an attempt
+ *       to use this from interrupt may crash during console initialization.
+ *       Special handling of `mbed_error` relaxes various system traps
+ *       to increase the chance of initialization working.
+ *
+ * @param str    C string that contains data stream to be printed.
+ *
+ */
+void mbed_error_puts(const char *str);
+
+/** @deprecated   Renamed to mbed_error_vprintf to match functionality */
+MBED_DEPRECATED_SINCE("mbed-os-5.11",
+                      "Renamed to mbed_error_vprintf to match functionality.")
+void mbed_error_vfprintf(const char *format, va_list arg) MBED_PRINTF(1, 0);
+/** @}*/
+
 
 #ifdef __cplusplus
 }

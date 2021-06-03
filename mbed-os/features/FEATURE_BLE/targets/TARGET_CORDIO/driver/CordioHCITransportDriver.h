@@ -28,6 +28,10 @@ namespace cordio {
  * It allow the stack to write data in the HCI channel.
  */
 class CordioHCITransportDriver {
+
+    // hook for internal tests and passthrough driver
+    friend class CordioHCIHook;
+
 public:
     /**
      * Driver destructor.
@@ -51,7 +55,8 @@ public:
      * packet, ACL packet or EVT packet. Depending on the type of transport
      * it can prefix the packet itself.
      * @param len Number of bytes to transmit.
-     * @param pData pointer to the data to transmit.
+     * @param pData Pointer to the data to transmit. This is an WSF buffer
+     * and if CORDIO_ZERO_COPY_HCI is enabled we receive ownership.
      *
      * @return The number of bytes which have been transmited.
      */
@@ -64,6 +69,13 @@ public:
      * @param len Number of bytes received.
      */
     static void on_data_received(uint8_t* data, uint16_t len);
+
+private:
+    typedef void (*data_received_handler_t)(uint8_t* data, uint8_t len);
+
+    static data_received_handler_t data_received_handler;
+
+    static void set_data_received_handler(data_received_handler_t handler);
 };
 
 } // namespace cordio

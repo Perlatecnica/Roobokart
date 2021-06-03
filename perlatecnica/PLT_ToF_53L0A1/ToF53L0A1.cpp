@@ -18,7 +18,7 @@
 
 #include "ToF53L0A1.h"
 
-#include "../../roobopoli/roobokart/roobokart_def.h"
+#include "../../roobokart/roobokart_def.h"
 #include "VL53L0X.h"
 
 ToF53L0A1::ToF53L0A1(){
@@ -26,7 +26,7 @@ ToF53L0A1::ToF53L0A1(){
 	device_i2c = new DevI2C(I2C_SDA, I2C_SCL);
 
 	/* creates the 53L0A1 expansion board singleton obj */
-	board = XNucleo53L0A1::instance(device_i2c, A2, D8, D2);
+	board = XNucleo53L0A1::instance(device_i2c, NC, NC, NC); // NC connected interrupt pin
 
 	/* Splash message*/
 	board->display->display_string("CIAO");

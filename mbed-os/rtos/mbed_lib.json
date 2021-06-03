@@ -1,6 +1,6 @@
 {
-    "name": "rtos",
-    "config": {
+  "name": "rtos-api",
+  "config": {
         "present": 1
-    }
+  }
 }

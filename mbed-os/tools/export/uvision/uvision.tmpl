@@ -10,6 +10,10 @@
       <TargetName>{{name}}</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
+      {% if toolchain_name %}
+      <pCCUsed>{{toolchain_name}}</pCCUsed>
+      {% endif %}
+      <uAC6>{{armc6}}</uAC6>
       <TargetOption>
         <TargetCommonOption>
           <Device>{{device.dname}}</Device>
@@ -21,7 +25,7 @@
           <StartupFile></StartupFile>
           <FlashDriverDll>{{device.flash_dll}}</FlashDriverDll>
           <DeviceId>0</DeviceId>
-          <RegisterFile>{{device.reg_file}}</RegisterFile>
+          <RegisterFile></RegisterFile>
           <MemoryEnv></MemoryEnv>
           <Cmp></Cmp>
           <Asm></Asm>
@@ -78,9 +82,9 @@
             <nStopB2X>0</nStopB2X>
           </BeforeMake>
           <AfterMake>
-            <RunUserProg1>0</RunUserProg1>
+            <RunUserProg1>{{postbuild_step_active}}</RunUserProg1>
             <RunUserProg2>0</RunUserProg2>
-            <UserProg1Name></UserProg1Name>
+            <UserProg1Name>{{postbuild_step if postbuild_step_active else ''}}</UserProg1Name>
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
@@ -178,7 +182,7 @@
           <bUseTDR>1</bUseTDR>
           <Flash2>BIN\UL2CM3.DLL</Flash2>
           <Flash3></Flash3>
-          <Flash4></Flash4>
+          <Flash4>{{'./flash_init.ini' if postbuild_step_active else ''}}</Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
           <pFcArmRoot></pFcArmRoot>
@@ -213,7 +217,7 @@
             <AdsLsxf>1</AdsLsxf>
             <RvctClst>0</RvctClst>
             <GenPPlst>0</GenPPlst>
-            <AdsCpuType>"{{device.core.replace("D","").replace("F","")}}"</AdsCpuType>
+            <AdsCpuType>"{{cputype}}"</AdsCpuType>
             <RvctDeviceName></RvctDeviceName>
             <mOS>0</mOS>
             <uocRom>0</uocRom>
@@ -351,10 +355,10 @@
           </ArmAdsMisc>
           <Cads>
             <interw>0</interw>
-            <Optim>1</Optim>
+            <Optim>2</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
-            <OneElfS>0</OneElfS>
+            <OneElfS>1</OneElfS>
             <Strict>0</Strict>
             <EnumInt>0</EnumInt>
             <PlainCh>0</PlainCh>
@@ -365,8 +369,8 @@
             <uSurpInc>0</uSurpInc>
             <uC99>1</uC99>
             <useXO>0</useXO>
-            <v6Lang>1</v6Lang>
-            <v6LangP>1</v6LangP>
+            <v6Lang>{{v6_lang}}</v6Lang>
+            <v6LangP>{{v6_lang_p}}</v6LangP>
             <vShortEn>1</vShortEn>
             <vShortWch>1</vShortWch>
             <v6Lto>0</v6Lto>
@@ -374,7 +378,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls>{{c_flags}}</MiscControls>
-              <Define></Define>
+              <Define>{{c_defines}}</Define>
               <Undefine></Undefine>
               <IncludePath>{{include_paths}}</IncludePath>
             </VariousControls>
@@ -394,7 +398,7 @@
               <MiscControls>{{asm_flags}}</MiscControls>
               <Define></Define>
               <Undefine></Undefine>
-              <IncludePath>{{include_paths}}</IncludePath>
+              <IncludePath></IncludePath>
             </VariousControls>
           </Aads>
           <LDads>
@@ -434,5 +438,4 @@
       </Groups>
     </Target>
   </Targets>
-
 </Project>

@@ -1,5 +1,6 @@
 /* mbed Microcontroller Library
- * Copyright (c) 2006-2013 ARM Limited
+ * Copyright (c) 2006-2019 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +19,18 @@
 
 #include "platform/platform.h"
 
+#include "platform/FileBase.h"
 #include "platform/FileSystemHandle.h"
 #include "platform/FileHandle.h"
 #include "platform/DirHandle.h"
 #include "platform/NonCopyable.h"
 
 namespace mbed {
-/** \addtogroup platform */
+/**
+ * \defgroup platform_FileSystemLike FileSystemLike functions
+ * \ingroup platform-public-api-file
+ * @{
+ */
 
 
 /** A filesystem-like object is one that can be used to open file-like
@@ -34,7 +40,6 @@ namespace mbed {
  *  of the rest of the functions just return error values).
  *
  * @note Synchronization level: Set by subclass
- * @ingroup platform
  */
 class FileSystemLike : public FileSystemHandle, public FileBase, private NonCopyable<FileSystemLike> {
 public:
@@ -55,7 +60,7 @@ public:
      *  @deprecated Replaced by `int open(FileHandle **, ...)` for propagating error codes
      */
     MBED_DEPRECATED_SINCE("mbed-os-5.5",
-        "Replaced by `int open(FileHandle **, ...)` for propagating error codes")
+                          "Replaced by `int open(FileHandle **, ...)` for propagating error codes")
     FileHandle *open(const char *path, int flags)
     {
         FileHandle *file;
@@ -70,7 +75,7 @@ public:
      *  @deprecated Replaced by `int open(DirHandle **, ...)` for propagating error codes
      */
     MBED_DEPRECATED_SINCE("mbed-os-5.5",
-        "Replaced by `int open(DirHandle **, ...)` for propagating error codes")
+                          "Replaced by `int open(DirHandle **, ...)` for propagating error codes")
     DirHandle *opendir(const char *path)
     {
         DirHandle *dir;
@@ -79,6 +84,7 @@ public:
     }
 };
 
+/**@}*/
 
 } // namespace mbed
 

@@ -18,7 +18,9 @@
 #include "greentea-client/test_env.h"
 #include "unity.h"
 #include "utest.h"
+#if defined(MBED_CONF_RTOS_PRESENT)
 #include "rtos.h"
+#endif
 
 using namespace utest::v1;
 
@@ -39,12 +41,7 @@ using namespace utest::v1;
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
 #define mbedtls_printf     printf
-#define mbedtls_snprintf   snprintf
-#define mbedtls_exit       exit
-#define MBEDTLS_EXIT_SUCCESS EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE EXIT_FAILURE
 #endif
 
 #define MBEDTLS_SELF_TEST_TEST_CASE(self_test_function) \
@@ -89,14 +86,58 @@ Case cases[] = {
 #endif /* MBEDTLS_SELF_TEST */
 };
 
-utest::v1::status_t test_setup(const size_t num_cases) {
+#if (defined(MBEDTLS_ENTROPY_C) && defined(TARGET_PSA) && defined(COMPONENT_PSA_SRV_IPC) && defined(MBEDTLS_PSA_CRYPTO_C))
+#include "crypto.h"
+#if !defined(MAX)
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#endif
+
+/* Calculating the minimum allowed entropy size in bytes */
+#define MBEDTLS_PSA_INJECT_ENTROPY_MIN_SIZE \
+            MAX(MBEDTLS_ENTROPY_MIN_PLATFORM, MBEDTLS_ENTROPY_BLOCK_SIZE)
+
+void inject_entropy_for_psa()
+{
+    if (psa_crypto_init() == PSA_ERROR_INSUFFICIENT_ENTROPY) {
+        uint8_t seed[MBEDTLS_PSA_INJECT_ENTROPY_MIN_SIZE] = {0};
+        /* inject some a seed for test*/
+        for (int i = 0; i < MBEDTLS_PSA_INJECT_ENTROPY_MIN_SIZE; ++i) {
+            seed[i] = i;
+        }
+
+        /* don't really care if this succeed this is just to make crypto init pass*/
+        mbedtls_psa_inject_entropy(seed, MBEDTLS_PSA_INJECT_ENTROPY_MIN_SIZE);
+    }
+}
+#endif // (defined(MBEDTLS_ENTROPY_C) && defined(TARGET_PSA) && defined(COMPONENT_PSA_SRV_IPC) && defined(MBEDTLS_PSA_CRYPTO_C))
+
+
+utest::v1::status_t test_setup(const size_t num_cases)
+{
     GREENTEA_SETUP(120, "default_auto");
     return verbose_test_setup_handler(num_cases);
 }
 
 Specification specification(test_setup, cases);
 
-int main() {
-    return !Harness::run(specification);
+int main()
+{
+    int ret = 0;
+#if defined(MBEDTLS_PLATFORM_C)
+    if ((ret = mbedtls_platform_setup(NULL)) != 0) {
+        mbedtls_printf("Mbed TLS selftest failed! mbedtls_platform_setup returned %d\n", ret);
+        return 1;
+    }
+#endif
+
+#if (defined(MBEDTLS_ENTROPY_C) && defined(TARGET_PSA) && defined(COMPONENT_PSA_SRV_IPC) && defined(MBEDTLS_PSA_CRYPTO_C))
+    inject_entropy_for_psa();
+#endif
+
+    ret = (Harness::run(specification) ? 0 : 1);
+#if defined(MBEDTLS_PLATFORM_C)
+    mbedtls_platform_teardown(NULL);
+#endif
+    return ret;
 }
 

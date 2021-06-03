@@ -1,5 +1,6 @@
 /* mbed Microcontroller Library
- * Copyright (c) 2015 ARM Limited
+ * Copyright (c) 2015-2019 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +18,17 @@
 #define MBED_TRANSACTION_H
 
 #include "platform/platform.h"
-#include "platform/FunctionPointer.h"
 
 namespace mbed {
-/** \addtogroup platform */
+/** \addtogroup platform-public-api */
+/** @{*/
+
+/**
+ * \defgroup platform_Transaction Transaction class
+ * @{
+ */
 
 /** Transaction structure
- * @ingroup platform
  */
 typedef struct {
     void *tx_buffer;           /**< Tx buffer */
@@ -38,25 +43,28 @@ typedef struct {
 /** Transaction class defines a transaction.
  *
  * @note Synchronization level: Not protected
- * @ingroup platform
  */
 template<typename Class>
 class Transaction {
 public:
-    Transaction(Class *tpointer, const transaction_t& transaction) : _obj(tpointer), _data(transaction) {
+    Transaction(Class *tpointer, const transaction_t &transaction) : _obj(tpointer), _data(transaction)
+    {
     }
 
-    Transaction() : _obj(), _data() {
+    Transaction() : _obj(), _data()
+    {
     }
 
-    ~Transaction() {
+    ~Transaction()
+    {
     }
 
     /** Get object's instance for the transaction
      *
      * @return The object which was stored
      */
-    Class* get_object() {
+    Class *get_object()
+    {
         return _obj;
     }
 
@@ -64,15 +72,18 @@ public:
      *
      * @return The transaction which was stored
      */
-    transaction_t* get_transaction() {
+    transaction_t *get_transaction()
+    {
         return &_data;
     }
 
 private:
-    Class* _obj;
+    Class *_obj;
     transaction_t _data;
 };
+/**@}*/
 
+/**@}*/
 }
 
 #endif

@@ -1,5 +1,5 @@
-/* CellularInterface
- * Copyright (c) 2015 ARM Limited
+/* Copyright (c) 2019 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,58 +14,146 @@
  * limitations under the License.
  */
 
-#ifndef CELLULAR_INTERFACE_H
-#define CELLULAR_INTERFACE_H
+#ifndef CELLULAR_INTERFACE_H_
+#define CELLULAR_INTERFACE_H_
 
 #include "netsocket/NetworkInterface.h"
 
-
-/** CellularInterface class
- *
- *  Common interface that is shared between ethernet hardware
- *  @addtogroup netsocket
+/**
+ * @addtogroup cellular
+ * @{
  */
-class CellularInterface : public NetworkInterface
-{
+
+/** Common interface that is shared between cellular interfaces.
+ */
+class CellularInterface: public NetworkInterface {
+
 public:
-    /** CellularInterface lifetime
+    /** Get the default cellular interface.
+     *
+     * This is provided as a weak method so applications can override.
+     * Default behavior is to get the target's default interface, if
+     * any.
+     *
+     * @return pointer to interface, if any.
      */
-    virtual ~CellularInterface() {};
+    static CellularInterface *get_default_instance();
 
-    /** Set the cellular network APN and credentials
+    /** Set the cellular network credentials.
      *
-     *  @param apn      Optional name of the network to connect to
-     *  @param username Optional username for the APN
-     *  @param password Optional password fot the APN
-     *  @return         0 on success, negative error code on failure
+     *  Please check documentation of connect() for default behavior of APN settings.
+     *
+     *  @param apn      Access point name.
+     *  @param uname    Username (optional).
+     *  @param pwd      Password (optional).
      */
-    virtual nsapi_error_t set_credentials(const char *apn,
-            const char *username = 0, const char *password = 0) = 0;
+    virtual void set_credentials(const char *apn, const char *uname = 0,
+                                 const char *pwd = 0) = 0;
 
-    /** Start the interface
+    /** Set the plmn. PLMN controls to what network device registers.
      *
-     *  @param apn      Optional name of the network to connect to
-     *  @param username Optional username for your APN
-     *  @param password Optional password for your APN
-     *  @return         0 on success, negative error code on failure
+     *  @param plmn     user to force what network to register.
      */
-    virtual nsapi_error_t connect(const char *apn,
-            const char *username = 0, const char *password = 0) = 0;
+    virtual void set_plmn(const char *plmn) = 0;
 
-    /** Start the interface
+    /** Set the PIN code for SIM card.
      *
-     *  Attempts to connect to a cellular network based on supplied credentials
+     *  @param sim_pin      PIN for the SIM card.
+     */
+    virtual void set_sim_pin(const char *sim_pin) = 0;
+
+    /** Attempt to connect to a cellular network with a PIN and credentials.
      *
-     *  @return         0 on success, negative error code on failure
+     *  @param sim_pin     PIN for the SIM card.
+     *  @param apn         Access point name (optional).
+     *  @param uname       Username (optional).
+     *  @param pwd         Password (optional).
+     *  @return            NSAPI_ERROR_OK on success, or negative error code on failure.
+     */
+    virtual nsapi_error_t connect(const char *sim_pin, const char *apn = 0,
+                                  const char *uname = 0,
+                                  const char *pwd = 0) = 0;
+
+    /** Attempt to connect to a cellular network.
+     *
+     *  If the SIM requires a PIN, and it is invalid or not set, NSAPI_ERROR_AUTH_ERROR is returned.
+     *
+     *  @return         NSAPI_ERROR_OK on success, or negative error code on failure.
      */
     virtual nsapi_error_t connect() = 0;
 
-    /** Stop the interface
+    /** Stop the interface.
      *
-     *  @return         0 on success, negative error code on failure
+     *  @return         NSAPI_ERROR_OK on success, or error code on failure.
      */
     virtual nsapi_error_t disconnect() = 0;
+
+    /** Check if the connection is currently established.
+     *
+     * @return `true` if the cellular module have successfully acquired a carrier and is
+     *         connected to an external packet data network using PPP, `false` otherwise.
+     */
+    virtual bool is_connected() = 0;
+
+    /** @copydoc NetworkInterface::get_ip_address */
+    virtual nsapi_error_t get_ip_address(SocketAddress *address) = 0;
+
+    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
+    virtual const char *get_ip_address() = 0;
+
+    /** @copydoc NetworkInterface::get_netmask */
+    virtual nsapi_error_t get_netmask(SocketAddress *address) = 0;
+
+    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
+    virtual const char *get_netmask() = 0;
+
+    /** @copydoc NetworkInterface::get_gateway */
+    virtual nsapi_error_t get_gateway(SocketAddress *address) = 0;
+
+    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
+    virtual const char *get_gateway() = 0;
+
+    /** @copydoc NetworkInterface::cellularBase
+     */
+    MBED_DEPRECATED_SINCE("mbed-os-5.12", "Migrated to CellularInterface")
+    virtual CellularInterface *cellularBase()
+    {
+        return this;
+    }
+
+    /** @copydoc NetworkInterface::cellularInterface
+     */
+    virtual CellularInterface *cellularInterface()
+    {
+        return this;
+    }
+
+#if !defined(DOXYGEN_ONLY)
+
+protected:
+    /** Get the target's default cellular interface.
+     *
+     * This is provided as a weak method so targets can override. The
+     * default implementation configures and returns the OnBoardModemInterface,
+     * if available.
+     *
+     * @return Pointer to interface, if any.
+     */
+    static CellularInterface *get_target_default_instance();
+
+#endif //!defined(DOXYGEN_ONLY)
+
+public:
+    /** Set default parameters on a cellular interface.
+     *
+     * A cellular interface instantiated directly or using
+     * CellularInterface::get_default_instance() is initially unconfigured.
+     * This call can be used to set the default parameters that would
+     * have been set if the interface had been requested using
+     * NetworkInterface::get_default_instance() (see nsapi JSON
+     * configuration).
+     */
+    virtual void set_default_parameters();
 };
 
-
-#endif
+#endif // CELLULAR_INTERFACE_H_

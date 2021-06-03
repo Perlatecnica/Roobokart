@@ -40,13 +40,10 @@
 
 #include "mbedtls/ssl_cookie.h"
 #include "mbedtls/ssl_internal.h"
+#include "mbedtls/error.h"
+#include "mbedtls/platform_util.h"
 
 #include <string.h>
-
-/* Implementation that should never be optimized out by the compiler */
-static void mbedtls_zeroize( void *v, size_t n ) {
-    volatile unsigned char *p = v; while( n-- ) *p++ = 0;
-}
 
 /*
  * If DTLS is in use, then at least one of SHA-1, SHA-256, SHA-512 is
@@ -101,14 +98,14 @@ void mbedtls_ssl_cookie_free( mbedtls_ssl_cookie_ctx *ctx )
     mbedtls_mutex_free( &ctx->mutex );
 #endif
 
-    mbedtls_zeroize( ctx, sizeof( mbedtls_ssl_cookie_ctx ) );
+    mbedtls_platform_zeroize( ctx, sizeof( mbedtls_ssl_cookie_ctx ) );
 }
 
 int mbedtls_ssl_cookie_setup( mbedtls_ssl_cookie_ctx *ctx,
                       int (*f_rng)(void *, unsigned char *, size_t),
                       void *p_rng )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     unsigned char key[COOKIE_MD_OUTLEN];
 
     if( ( ret = f_rng( p_rng, key, sizeof( key ) ) ) != 0 )
@@ -122,7 +119,7 @@ int mbedtls_ssl_cookie_setup( mbedtls_ssl_cookie_ctx *ctx,
     if( ret != 0 )
         return( ret );
 
-    mbedtls_zeroize( key, sizeof( key ) );
+    mbedtls_platform_zeroize( key, sizeof( key ) );
 
     return( 0 );
 }
@@ -161,7 +158,7 @@ int mbedtls_ssl_cookie_write( void *p_ctx,
                       unsigned char **p, unsigned char *end,
                       const unsigned char *cli_id, size_t cli_id_len )
 {
-    int ret;
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     mbedtls_ssl_cookie_ctx *ctx = (mbedtls_ssl_cookie_ctx *) p_ctx;
     unsigned long t;
 

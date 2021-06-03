@@ -1,5 +1,6 @@
 /* mbed Microcontroller Library
- * Copyright (c) 2006-2013 ARM Limited
+ * Copyright (c) 2006-2019 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +20,13 @@
 #include "platform/platform.h"
 
 #include "hal/gpio_api.h"
-#include "platform/mbed_critical.h"
 
 namespace mbed {
-/** \addtogroup drivers */
+/**
+ * \defgroup drivers_DigitalIn DigitalIn class
+ * \ingroup drivers-public-api-gpio
+ * @{
+ */
 
 /** A digital input, used for reading the state of a pin
  *
@@ -46,7 +50,6 @@ namespace mbed {
  *     }
  * }
  * @endcode
- * @ingroup drivers
  */
 class DigitalIn {
 
@@ -55,7 +58,8 @@ public:
      *
      *  @param pin DigitalIn pin to connect to
      */
-    DigitalIn(PinName pin) : gpio() {
+    DigitalIn(PinName pin) : gpio()
+    {
         // No lock needed in the constructor
         gpio_init_in(&gpio, pin);
     }
@@ -65,17 +69,20 @@ public:
      *  @param pin DigitalIn pin to connect to
      *  @param mode the initial mode of the pin
      */
-    DigitalIn(PinName pin, PinMode mode) : gpio() {
+    DigitalIn(PinName pin, PinMode mode) : gpio()
+    {
         // No lock needed in the constructor
         gpio_init_in_ex(&gpio, pin, mode);
     }
+
     /** Read the input, represented as 0 or 1 (int)
      *
      *  @returns
      *    An integer representing the state of the input pin,
      *    0 for logical 0, 1 for logical 1
      */
-    int read() {
+    int read()
+    {
         // Thread safe / atomic HAL call
         return gpio_read(&gpio);
     }
@@ -84,11 +91,7 @@ public:
      *
      *  @param pull PullUp, PullDown, PullNone, OpenDrain
      */
-    void mode(PinMode pull) {
-        core_util_critical_section_enter();
-        gpio_mode(&gpio, pull);
-        core_util_critical_section_exit();
-    }
+    void mode(PinMode pull);
 
     /** Return the output setting, represented as 0 or 1 (int)
      *
@@ -96,22 +99,33 @@ public:
      *    Non zero value if pin is connected to uc GPIO
      *    0 if gpio object was initialized with NC
      */
-    int is_connected() {
+    int is_connected()
+    {
         // Thread safe / atomic HAL call
         return gpio_is_connected(&gpio);
     }
 
     /** An operator shorthand for read()
      * \sa DigitalIn::read()
+     * @code
+     *      DigitalIn  button(BUTTON1);
+     *      DigitalOut led(LED1);
+     *      led = button;   // Equivalent to led.write(button.read())
+     * @endcode
      */
-    operator int() {
+    operator int()
+    {
         // Underlying read is thread safe
         return read();
     }
 
 protected:
+#if !defined(DOXYGEN_ONLY)
     gpio_t gpio;
+#endif //!defined(DOXYGEN_ONLY)
 };
+
+/** @}*/
 
 } // namespace mbed
 

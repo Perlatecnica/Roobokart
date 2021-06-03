@@ -1,5 +1,6 @@
 /* mbed Microcontroller Library
- * Copyright (c) 2006-2013 ARM Limited
+ * Copyright (c) 2006-2019 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +19,15 @@
 
 #include "platform/platform.h"
 
-#if defined (DEVICE_PWMOUT) || defined(DOXYGEN_ONLY)
+#if DEVICE_PWMOUT || defined(DOXYGEN_ONLY)
 #include "hal/pwmout_api.h"
-#include "platform/mbed_critical.h"
-#include "platform/mbed_sleep.h"
 
 namespace mbed {
-/** \addtogroup drivers */
+/**
+ * \defgroup drivers_PwmOut PwmOut class
+ * \ingroup drivers-public-api-gpio
+ * @{
+ */
 
 /** A pulse-width modulation digital output
  *
@@ -32,7 +35,7 @@ namespace mbed {
  *
  * Example
  * @code
- * // Fade a led on.
+ * // Gradually change the intensity of the LED.
  * #include "mbed.h"
  *
  * PwmOut led(LED1);
@@ -47,7 +50,6 @@ namespace mbed {
  *     }
  * }
  * @endcode
- * @ingroup drivers
  */
 class PwmOut {
 
@@ -57,31 +59,25 @@ public:
      *
      *  @param pin PwmOut pin to connect to
      */
-    PwmOut(PinName pin) : _deep_sleep_locked(false) {
-        core_util_critical_section_enter();
-        pwmout_init(&_pwm, pin);
-        core_util_critical_section_exit();
-    }
+    PwmOut(PinName pin);
 
-    ~PwmOut() {
-        core_util_critical_section_enter();
-        unlock_deep_sleep();
-        core_util_critical_section_exit();
-    }
+    /** Create a PwmOut connected to the specified pin
+     *
+     *  @param pinmap reference to structure which holds static pinmap.
+     */
+    PwmOut(const PinMap &pinmap);
+    PwmOut(const PinMap &&) = delete; // prevent passing of temporary objects
 
-    /** Set the ouput duty-cycle, specified as a percentage (float)
+    ~PwmOut();
+
+    /** Set the output duty-cycle, specified as a percentage (float)
      *
      *  @param value A floating-point value representing the output duty-cycle,
      *    specified as a percentage. The value should lie between
      *    0.0f (representing on 0%) and 1.0f (representing on 100%).
      *    Values outside this range will be saturated to 0.0f or 1.0f.
      */
-    void write(float value) {
-        core_util_critical_section_enter();
-        lock_deep_sleep();
-        pwmout_write(&_pwm, value);
-        core_util_critical_section_exit();
-    }
+    void write(float value);
 
     /** Return the current output duty-cycle setting, measured as a percentage (float)
      *
@@ -93,12 +89,7 @@ public:
      *  @note
      *  This value may not match exactly the value set by a previous write().
      */
-    float read() {
-        core_util_critical_section_enter();
-        float val = pwmout_read(&_pwm);
-        core_util_critical_section_exit();
-        return val;
-    }
+    float read();
 
     /** Set the PWM period, specified in seconds (float), keeping the duty cycle the same.
      *
@@ -107,61 +98,56 @@ public:
      *   The resolution is currently in microseconds; periods smaller than this
      *   will be set to zero.
      */
-    void period(float seconds) {
-        core_util_critical_section_enter();
-        pwmout_period(&_pwm, seconds);
-        core_util_critical_section_exit();
-    }
+    void period(float seconds);
 
-    /** Set the PWM period, specified in milli-seconds (int), keeping the duty cycle the same.
-     *  @param ms Change the period of a PWM signal in milli-seconds without modifying the duty cycle
+    /** Set the PWM period, specified in milliseconds (int), keeping the duty cycle the same.
+     *  @param ms Change the period of a PWM signal in milliseconds without modifying the duty cycle
      */
-    void period_ms(int ms) {
-        core_util_critical_section_enter();
-        pwmout_period_ms(&_pwm, ms);
-        core_util_critical_section_exit();
-    }
+    void period_ms(int ms);
 
-    /** Set the PWM period, specified in micro-seconds (int), keeping the duty cycle the same.
-     *  @param us Change the period of a PWM signal in micro-seconds without modifying the duty cycle
+    /** Set the PWM period, specified in microseconds (int), keeping the duty cycle the same.
+     *  @param us Change the period of a PWM signal in microseconds without modifying the duty cycle
      */
-    void period_us(int us) {
-        core_util_critical_section_enter();
-        pwmout_period_us(&_pwm, us);
-        core_util_critical_section_exit();
-    }
+    void period_us(int us);
 
     /** Set the PWM pulsewidth, specified in seconds (float), keeping the period the same.
      *  @param seconds Change the pulse width of a PWM signal specified in seconds (float)
      */
-    void pulsewidth(float seconds) {
-        core_util_critical_section_enter();
-        pwmout_pulsewidth(&_pwm, seconds);
-        core_util_critical_section_exit();
-    }
+    void pulsewidth(float seconds);
 
-    /** Set the PWM pulsewidth, specified in milli-seconds (int), keeping the period the same.
-     *  @param ms Change the pulse width of a PWM signal specified in milli-seconds
+    /** Set the PWM pulsewidth, specified in milliseconds (int), keeping the period the same.
+     *  @param ms Change the pulse width of a PWM signal specified in milliseconds
      */
-    void pulsewidth_ms(int ms) {
-        core_util_critical_section_enter();
-        pwmout_pulsewidth_ms(&_pwm, ms);
-        core_util_critical_section_exit();
-    }
+    void pulsewidth_ms(int ms);
 
-    /** Set the PWM pulsewidth, specified in micro-seconds (int), keeping the period the same.
-     *  @param us Change the pulse width of a PWM signal specified in micro-seconds  
+    /** Set the PWM pulsewidth, specified in microseconds (int), keeping the period the same.
+     *  @param us Change the pulse width of a PWM signal specified in microseconds
      */
-    void pulsewidth_us(int us) {
-        core_util_critical_section_enter();
-        pwmout_pulsewidth_us(&_pwm, us);
-        core_util_critical_section_exit();
-    }
+    void pulsewidth_us(int us);
+
+    /** Suspend PWM operation
+     *
+     * Control the PWM state. This is primarily intended
+     * for temporary power-saving; This call can
+     * allow pwm to be temporarily disabled to permit power saving without
+     * losing device state. The subsequent function call must be PwmOut::resume
+     * for PWM to resume; any other calls prior to resuming are undefined behavior.
+     */
+    void suspend();
+
+    /** Resume PWM operation
+     *
+     * Control the PWM state. This is primarily intended
+     * to resume PWM operations after a previous PwmOut::suspend call;
+     * This call restores the device state prior to suspension.
+     */
+    void resume();
 
     /** A operator shorthand for write()
      *  \sa PwmOut::write()
      */
-    PwmOut& operator= (float value) {
+    PwmOut &operator= (float value)
+    {
         // Underlying call is thread safe
         write(value);
         return *this;
@@ -169,8 +155,9 @@ public:
 
     /** A operator shorthand for write()
      * \sa PwmOut::write()
-     */    
-    PwmOut& operator= (PwmOut& rhs) {
+     */
+    PwmOut &operator= (PwmOut &rhs)
+    {
         // Underlying call is thread safe
         write(rhs.read());
         return *this;
@@ -179,31 +166,35 @@ public:
     /** An operator shorthand for read()
      * \sa PwmOut::read()
      */
-    operator float() {
+    operator float()
+    {
         // Underlying call is thread safe
         return read();
     }
 
+#if !(DOXYGEN_ONLY)
 protected:
     /** Lock deep sleep only if it is not yet locked */
-    void lock_deep_sleep() {
-        if (_deep_sleep_locked == false) {
-            sleep_manager_lock_deep_sleep();
-            _deep_sleep_locked = true;
-        }
-    }
+    void lock_deep_sleep();
 
     /** Unlock deep sleep in case it is locked */
-    void unlock_deep_sleep() {
-        if (_deep_sleep_locked == true) {
-            sleep_manager_unlock_deep_sleep();
-            _deep_sleep_locked = false;
-        }
-    }
+    void unlock_deep_sleep();
+
+    /** Initialize this instance */
+    void init();
+
+    /** Power down this instance */
+    void deinit();
 
     pwmout_t _pwm;
+    PinName _pin;
     bool _deep_sleep_locked;
+    bool _initialized;
+    float _duty_cycle;
+#endif
 };
+
+/** @}*/
 
 } // namespace mbed
 

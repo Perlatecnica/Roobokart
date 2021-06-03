@@ -1,7 +1,4 @@
-
-/** \addtogroup netsocket */
-/** @{*/
-/* EthInterface
+/*
  * Copyright (c) 2015 ARM Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,18 +14,51 @@
  * limitations under the License.
  */
 
+/* @file EthInterface.h Common interface between Ethernet hardware */
+/** \addtogroup netinterface */
+/** @{*/
+
 #ifndef ETH_INTERFACE_H
 #define ETH_INTERFACE_H
 
 #include "netsocket/NetworkInterface.h"
 
 
-/** EthInterface class
- *
- *  Common interface that is shared between ethernet hardware.
+/** Common interface between Ethernet hardware.
  */
-class EthInterface : public NetworkInterface
-{
+class EthInterface : public virtual NetworkInterface {
+public:
+
+    /** @copydoc NetworkInterface::ethInterface
+     */
+    virtual EthInterface *ethInterface()
+    {
+        return this;
+    }
+
+    /** Get the default Ethernet interface.
+     *
+     * This is provided as a weak method so applications can override it.
+     * Default behavior is to get the target's default interface, if
+     * any.
+     *
+     * @return Pointer to interface, if one exists.
+     */
+    static EthInterface *get_default_instance();
+
+#if !defined(DOXYGEN_ONLY)
+protected:
+
+    /** Get the target's default Ethernet interface.
+     *
+     * This is provided as a weak method so targets can override it. The
+     * default implementation invokes EthernetInterface with the
+     * default EMAC and default network stack, if DEVICE_EMAC is set.
+     *
+     * @return Pointer to interface, if one exists.
+     */
+    static EthInterface *get_target_default_instance();
+#endif //!defined(DOXYGEN_ONLY)
 };
 
 

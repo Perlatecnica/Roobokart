@@ -13,6 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#if defined(MBED_RTOS_SINGLE_THREAD) || !defined(MBED_CONF_RTOS_PRESENT)
+#error [NOT_SUPPORTED] Semaphore test cases require RTOS with multithread to run
+#else
+
+#if !DEVICE_USTICKER
+#error [NOT_SUPPORTED] UsTicker need to be enabled for this test.
+#else
+
 #include "mbed.h"
 #include "greentea-client/test_env.h"
 #include "unity.h"
@@ -20,10 +28,6 @@
 #include "rtos.h"
 
 using namespace utest::v1;
-
-#if defined(MBED_RTOS_SINGLE_THREAD)
-  #error [NOT_SUPPORTED] test not supported
-#endif
 
 #define THREAD_DELAY     30
 #define SEMAPHORE_SLOTS  2
@@ -42,13 +46,13 @@ void test_thread(int const *delay)
 {
     const int thread_delay = *delay;
     while (true) {
-        two_slots.wait();
+        two_slots.acquire();
         sem_counter++;
         const bool sem_lock_failed = sem_counter > SEMAPHORE_SLOTS;
         if (sem_lock_failed) {
             sem_defect = true;
         }
-        Thread::wait(thread_delay);
+        ThisThread::sleep_for(thread_delay);
         sem_counter--;
         change_counter++;
         two_slots.release();
@@ -92,8 +96,7 @@ struct thread_data {
 
 void single_thread(struct thread_data *data)
 {
-    int32_t cnt = data->sem->wait();
-    TEST_ASSERT_EQUAL(1, cnt);
+    data->sem->acquire();
     data->data++;
 }
 
@@ -119,7 +122,7 @@ void test_single_thread()
 
     res = t.start(callback(single_thread, &data));
     TEST_ASSERT_EQUAL(osOK, res);
-    Thread::wait(SHORT_WAIT);
+    ThisThread::sleep_for(SHORT_WAIT);
 
     TEST_ASSERT_EQUAL(Thread::WaitingSemaphore, t.get_state());
     TEST_ASSERT_EQUAL(0, data.data);
@@ -127,7 +130,7 @@ void test_single_thread()
     res = sem.release();
     TEST_ASSERT_EQUAL(osOK, res);
 
-    Thread::wait(SHORT_WAIT);
+    ThisThread::sleep_for(SHORT_WAIT);
 
     TEST_ASSERT_EQUAL(1, data.data);
 
@@ -136,8 +139,8 @@ void test_single_thread()
 
 void timeout_thread(Semaphore *sem)
 {
-    int32_t cnt = sem->wait(30);
-    TEST_ASSERT_EQUAL(0, cnt);
+    bool acquired = sem->try_acquire_for(30);
+    TEST_ASSERT_FALSE(acquired);
 }
 
 /** Test timeout
@@ -156,7 +159,7 @@ void test_timeout()
     timer.start();
     res = t.start(callback(timeout_thread, &sem));
     TEST_ASSERT_EQUAL(osOK, res);
-    Thread::wait(SHORT_WAIT);
+    ThisThread::sleep_for(SHORT_WAIT);
 
     TEST_ASSERT_EQUAL(Thread::WaitingSemaphore, t.get_state());
 
@@ -184,8 +187,8 @@ void test_no_timeout()
     Timer timer;
     timer.start();
 
-    int32_t cnt = sem.wait(0);
-    TEST_ASSERT_EQUAL(T, cnt);
+    bool acquired = sem.try_acquire();
+    TEST_ASSERT_EQUAL(T > 0, acquired);
 
     TEST_ASSERT_UINT32_WITHIN(5000, 0, timer.read_us());
 }
@@ -200,9 +203,9 @@ void test_multiple_tokens_wait()
 {
     Semaphore sem(5);
 
-    for(int i = 5; i >= 0; i--) {
-        int32_t cnt = sem.wait(0);
-        TEST_ASSERT_EQUAL(i, cnt);
+    for (int i = 5; i >= 0; i--) {
+        bool acquired = sem.try_acquire();
+        TEST_ASSERT_EQUAL(i > 0, acquired);
     }
 }
 
@@ -216,7 +219,7 @@ void test_multiple_tokens_release()
 {
     Semaphore sem(0, 5);
 
-    for(int i = 5; i > 0; i--) {
+    for (int i = 5; i > 0; i--) {
         osStatus stat = sem.release();
         TEST_ASSERT_EQUAL(osOK, stat);
     }
@@ -246,3 +249,6 @@ int main()
 {
     return !Harness::run(specification);
 }
+
+#endif // !DEVICE_USTICKER
+#endif // defined(MBED_RTOS_SINGLE_THREAD) || !defined(MBED_CONF_RTOS_PRESENT)

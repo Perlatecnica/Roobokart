@@ -36,7 +36,7 @@
 extern "C" {
 #endif
 
-#ifdef DEVICE_PWMOUT
+#if DEVICE_PWMOUT
 
 typedef enum {
     PWMOUT_ON_APB1 = 0,
@@ -54,4 +54,8 @@ extern const pwm_apb_map_t pwm_apb_map_table[];
 
 #endif // DEVICE_PWMOUT
 
+#ifdef __cplusplus
+}
+#endif
+    
 #endif

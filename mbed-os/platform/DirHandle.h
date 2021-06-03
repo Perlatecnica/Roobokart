@@ -1,5 +1,6 @@
 /* mbed Microcontroller Library
- * Copyright (c) 2006-2013 ARM Limited
+ * Copyright (c) 2006-2019 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,30 +18,39 @@
 #define MBED_DIRHANDLE_H
 
 #include <stdint.h>
-#include "platform/platform.h"
-#include "platform/FileHandle.h"
+#include "platform/mbed_toolchain.h"
 #include "platform/NonCopyable.h"
 
 namespace mbed {
-/** \addtogroup platform */
+/** \addtogroup platform-public-api */
+/** @{*/
+/**
+ * \defgroup platform_DirHandle DirHandle functions
+ * @{
+ */
 
 
-/** Represents a directory stream. Objects of this type are returned
- *  by an opendir function. The core functions are read and seek,
+/** Represents a directory stream. An opendir function returns
+ *  objects of this type. The core functions are read and seek,
  *  but only a subset needs to be provided.
  *
- *  If a FileSystemLike class defines the opendir method, then the
- *  directories of an object of that type can be accessed by
- *  DIR *d = opendir("/example/directory") (or opendir("/example")
- *  to open the root of the filesystem), and then using readdir(d) etc.
+ *  If a FileSystemLike class defines the opendir method, then you
+ *  can access the directories of an object of that type by either:
+ *  @code
+ *  DIR *d  = opendir("/example/directory");
+ *  @endcode
+ *  or
+ *  @code
+ *  DIR *d = opendir("/example");
+ *  @endcode
+ *  to open the root of the file system.
  *
  *  The root directory is considered to contain all FileHandle and
- *  FileSystem objects, so the DIR* returned by opendir("/") will
- *  reflect this.
+ *  FileSystem objects, so the DIR pointer returned by opendir("/")
+ *  reflects this.
  *
  *  @note to create a directory, @see Dir
  *  @note Synchronization level: Set by subclass
- *  @ingroup platform
  */
 class DirHandle : private NonCopyable<DirHandle> {
 public:
@@ -76,7 +86,7 @@ public:
      */
     virtual void rewind() = 0;
 
-    /** Get the sizeof the directory 
+    /** Get the sizeof the directory
      *
      *  @return         Number of files in the directory
      */
@@ -101,17 +111,22 @@ public:
      *  @returns
      *    0 on success,
      *   -1 on error.
+     *  @deprecated Replaced by `int DirHandle::close()'
      */
     MBED_DEPRECATED_SINCE("mbed-os-5.4", "Replaced by DirHandle::close")
-    virtual int closedir() { return close(); };
+    virtual int closedir()
+    {
+        return close();
+    };
 
-    /** Return the directory entry at the current position, and
+    /** Returns the directory entry at the current position, and
      *  advances the position to the next entry.
      *
      * @returns
      *  A pointer to a dirent structure representing the
      *  directory entry at the current position, or NULL on reaching
      *  end of directory or error.
+     * @deprecated Replaced by `ssize_t DirHandle::read(struct dirent *ent)
      */
     MBED_DEPRECATED_SINCE("mbed-os-5.4", "Replaced by DirHandle::read")
     virtual struct dirent *readdir()
@@ -121,28 +136,42 @@ public:
     }
 
     /** Resets the position to the beginning of the directory.
+     * @deprecated Replaced by `void DirHandle::rewind()'
      */
     MBED_DEPRECATED_SINCE("mbed-os-5.4", "Replaced by DirHandle::rewind")
-    virtual void rewinddir() { rewind(); }
+    virtual void rewinddir()
+    {
+        rewind();
+    }
 
     /** Returns the current position of the DirHandle.
      *
      * @returns
      *   the current position,
      *  -1 on error.
+     * @deprecated Replaced by `off_t DirHandle::tell()'
      */
     MBED_DEPRECATED_SINCE("mbed-os-5.4", "Replaced by DirHandle::tell")
-    virtual off_t telldir() { return tell(); }
+    virtual off_t telldir()
+    {
+        return tell();
+    }
 
     /** Sets the position of the DirHandle.
      *
      *  @param location The location to seek to. Must be a value returned by telldir.
+     *  @deprecated Replaced by `void DirHandle::seek(off_t offset)'
      */
     MBED_DEPRECATED_SINCE("mbed-os-5.4", "Replaced by DirHandle::seek")
-    virtual void seekdir(off_t location) { seek(location); }
+    virtual void seekdir(off_t location)
+    {
+        seek(location);
+    }
 };
 
+/**@}*/
 
+/**@}*/
 } // namespace mbed
 
 #endif /* MBED_DIRHANDLE_H */

@@ -2,9 +2,7 @@
   ******************************************************************************
   * @file      startup_stm32f429xx.s
   * @author    MCD Application Team
-  * @version   V2.3.0
-  * @date      02-March-2015 
-  * @brief     STM32F429xx Devices vector table for Atollic TrueSTUDIO toolchain. 
+  * @brief     STM32F429xx Devices vector table for GCC based toolchains. 
   *            This module performs:
   *                - Set the initial SP
   *                - Set the initial PC == Reset_Handler,
@@ -16,7 +14,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT 2017 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -58,6 +56,10 @@ defined in linker script */
 .word  _sdata
 /* end address for the .data section. defined in linker script */
 .word  _edata
+/* start address for the .bss section. defined in linker script */
+.word  _sbss
+/* end address for the .bss section. defined in linker script */
+.word  _ebss
 /* stack used for SystemInit_ExtMemCtl; always internal RAM used */
 
 /**
@@ -72,10 +74,10 @@ defined in linker script */
     .section  .text.Reset_Handler
   .weak  Reset_Handler
   .type  Reset_Handler, %function
-Reset_Handler:
-  ldr   sp, =__stack       /* set stack pointer */
-
-/* Copy the data segment initializers from flash to SRAM */
+Reset_Handler: 
+  ldr   sp, =_estack       /* set stack pointer */
+ 
+/* Copy the data segment initializers from flash to SRAM */  
   movs  r1, #0
   b  LoopCopyDataInit
 
@@ -91,14 +93,19 @@ LoopCopyDataInit:
   adds  r2, r0, r1
   cmp  r2, r3
   bcc  CopyDataInit
+  ldr  r2, =_sbss
+  b  LoopFillZerobss
+/* Zero fill the bss segment. */  
+FillZerobss:
+  movs  r3, #0
+  str  r3, [r2], #4
+    
+LoopFillZerobss:
+  ldr  r3, = _ebss
+  cmp  r2, r3
+  bcc  FillZerobss
 
 /* Call the clock system intitialization function.*/
-  bl SystemInitPre
-  bl HAL_InitPre
-#if defined(FEATURE_UVISOR) && defined(TARGET_UVISOR_SUPPORTED)
-  ldr r0, =uvisor_init
-  blx r0
-#endif /* defined(FEATURE_UVISOR) && defined(TARGET_UVISOR_SUPPORTED) */
   bl  SystemInit   
 /* Call static constructors */
   //bl __libc_init_array
@@ -133,10 +140,10 @@ Infinite_Loop:
 *******************************************************************************/
    .section  .isr_vector,"a",%progbits
   .type  g_pfnVectors, %object
-  .size  g_pfnVectors, .-g_pfnVectors
-   
-g_pfnVectors:
-  .word  __stack
+  .size  g_pfnVectors, .-g_pfnVectors 
+  
+  g_pfnVectors:
+  .word  _estack
   .word  Reset_Handler
 
   .word  NMI_Handler
@@ -203,7 +210,7 @@ g_pfnVectors:
   .word     TIM8_TRG_COM_TIM14_IRQHandler     /* TIM8 Trigger and Commutation and TIM14 */
   .word     TIM8_CC_IRQHandler                /* TIM8 Capture Compare         */                          
   .word     DMA1_Stream7_IRQHandler           /* DMA1 Stream7                 */                          
-  .word     FMC_IRQHandler                    /* FMC                         */                   
+  .word     FMC_IRQHandler                    /* FMC                          */                   
   .word     SDIO_IRQHandler                   /* SDIO                         */                   
   .word     TIM5_IRQHandler                   /* TIM5                         */                   
   .word     SPI3_IRQHandler                   /* SPI3                         */                   
@@ -243,8 +250,8 @@ g_pfnVectors:
   .word     SPI5_IRQHandler                   /* SPI5 						  */
   .word     SPI6_IRQHandler                   /* SPI6						  */
   .word     SAI1_IRQHandler                   /* SAI1						  */
-  .word     LTDC_IRQHandler                   /* LTDC_IRQHandler			  */
-  .word     LTDC_ER_IRQHandler                /* LTDC_ER_IRQHandler			  */
+  .word     LTDC_IRQHandler                   /* LTDC           		      */
+  .word     LTDC_ER_IRQHandler                /* LTDC error          	      */
   .word     DMA2D_IRQHandler                  /* DMA2D                        */
   
 /*******************************************************************************

@@ -18,16 +18,16 @@
 #ifndef USBHAL_IP_OTGFSHS_H
 #define USBHAL_IP_OTGFSHS_H
 
-//==================================================================
-// This board has both USB OTG FS and HS connectors.
-// Select one line only.
-//==================================================================
 #if defined(TARGET_DISCO_F746NG)
-//#define TARGET_DISCO_F746NG_OTG_FS
+#if (MBED_CONF_TARGET_USB_SPEED == 1) // Defined in json configuration file
 #define TARGET_DISCO_F746NG_OTG_HS
+#else
+#define TARGET_DISCO_F746NG_OTG_FS
+#endif
 #endif
 
-#if defined(TARGET_DISCO_F769NI) || \
+#if defined(TARGET_DISCO_F429ZI) || \
+    defined(TARGET_DISCO_F769NI) || \
     defined(TARGET_DISCO_F746NG_OTG_HS)
 #define USBHAL_IRQn  OTG_HS_IRQn
 #else
@@ -44,8 +44,7 @@
 #error "FIFO dimensioning incorrect"
 #endif
 
-typedef struct
-{
+typedef struct {
     USBHAL *inst;
 
     void (USBHAL::*bus_reset)(void);
@@ -71,17 +70,16 @@ uint32_t HAL_PCDEx_GetTxFiFo(PCD_HandleTypeDef *hpcd, uint8_t fifo)
     uint32_t len;
     if (fifo == 0) {
         len = hpcd->Instance->DIEPTXF0_HNPTXFSIZ >> 16;
-    }
-    else {
+    } else {
         len =  hpcd->Instance->DIEPTXF[fifo - 1] >> 16;
     }
     return len * 4;
 }
 
-void HAL_PCD_SOFCallback(PCD_HandleTypeDef *hpcd) 
+void HAL_PCD_SOFCallback(PCD_HandleTypeDef *hpcd)
 {
-    USBHAL_Private_t *priv=((USBHAL_Private_t *)(hpcd->pData));
-    USBHAL *obj= priv->inst;
+    USBHAL_Private_t *priv = ((USBHAL_Private_t *)(hpcd->pData));
+    USBHAL *obj = priv->inst;
     USB_OTG_GlobalTypeDef *USBx = hpcd->Instance;
     uint32_t sofnum = (USBx_DEVICE->DSTS & USB_OTG_DSTS_FNSOF) >> 8;
     void (USBHAL::*func)(int frame) = priv->sof;
@@ -90,8 +88,9 @@ void HAL_PCD_SOFCallback(PCD_HandleTypeDef *hpcd)
 
 USBHAL *USBHAL::instance;
 
-USBHAL::USBHAL(void) {
-    USBHAL_Private_t *HALPriv = new(USBHAL_Private_t);
+USBHAL::USBHAL(void)
+{
+    USBHAL_Private_t *HALPriv = new (USBHAL_Private_t);
 
     memset(&hpcd.Init, 0, sizeof(hpcd.Init));
 
@@ -99,6 +98,11 @@ USBHAL::USBHAL(void) {
     defined(TARGET_DISCO_F746NG_OTG_HS)
     hpcd.Instance = USB_OTG_HS;
     hpcd.Init.phy_itface = PCD_PHY_ULPI;
+    hpcd.Init.Sof_enable = 0;
+    hpcd.Init.speed = PCD_SPEED_HIGH;
+#elif defined(TARGET_DISCO_F429ZI)
+    hpcd.Instance = USB_OTG_HS;
+    hpcd.Init.phy_itface = PCD_PHY_EMBEDDED;
     hpcd.Init.Sof_enable = 0;
     hpcd.Init.speed = PCD_SPEED_HIGH;
 #else
@@ -135,12 +139,14 @@ USBHAL::USBHAL(void) {
     defined(TARGET_NUCLEO_F401RE) || \
     defined(TARGET_NUCLEO_F411RE) || \
     defined(TARGET_NUCLEO_F412ZG) || \
+    defined(TARGET_NUCLEO_F413ZH) || \
     defined(TARGET_NUCLEO_F429ZI) || \
     defined(TARGET_NUCLEO_F446RE) || \
     defined(TARGET_NUCLEO_F446ZE) || \
     defined(TARGET_NUCLEO_F767ZI) || \
     defined(TARGET_NUCLEO_F746ZG) || \
     defined(TARGET_DISCO_F407VG) || \
+    defined(TARGET_DISCO_F413ZH) || \
     defined(TARGET_DISCO_F469NI) || \
     defined(TARGET_DISCO_F746NG_OTG_FS)
     __HAL_RCC_GPIOA_CLK_ENABLE();
@@ -150,6 +156,13 @@ USBHAL::USBHAL(void) {
     pin_function(PA_10, STM_PIN_DATA(STM_MODE_AF_OD, GPIO_PULLUP, GPIO_AF10_OTG_FS)); // ID
     pin_function(PA_8, STM_PIN_DATA(STM_MODE_AF_PP, GPIO_NOPULL, GPIO_AF10_OTG_FS));  // SOF
     __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
+
+#elif defined(TARGET_DISCO_F429ZI)
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    pin_function(PB_14, STM_PIN_DATA(STM_MODE_AF_PP, GPIO_NOPULL, GPIO_AF12_OTG_HS_FS)); // DM
+    pin_function(PB_15, STM_PIN_DATA(STM_MODE_AF_PP, GPIO_NOPULL, GPIO_AF12_OTG_HS_FS)); // DP
+    pin_function(PB_13, STM_PIN_DATA(STM_MODE_INPUT, GPIO_NOPULL, 0)); // VBUS
+    __HAL_RCC_USB_OTG_HS_CLK_ENABLE();
 
 #elif defined(TARGET_DISCO_L475VG_IOT01A) || \
       defined(TARGET_DISCO_L476VG)
@@ -188,6 +201,12 @@ USBHAL::USBHAL(void) {
     __HAL_RCC_USB_OTG_HS_ULPI_CLK_ENABLE();
     __HAL_RCC_USB_OTG_HS_CLK_ENABLE();
 
+#elif defined(TARGET_STEVAL_3DP001V1)
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    pin_function(PA_11, STM_PIN_DATA(STM_MODE_AF_PP, GPIO_NOPULL, GPIO_AF10_OTG_FS)); // DM
+    pin_function(PA_12, STM_PIN_DATA(STM_MODE_AF_PP, GPIO_NOPULL, GPIO_AF10_OTG_FS)); // DP
+    __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
+
 #else
 #error "USB pins are not configured !"
 #endif
@@ -195,7 +214,7 @@ USBHAL::USBHAL(void) {
     __HAL_RCC_SYSCFG_CLK_ENABLE();
 
     // Configure PCD and FIFOs
-    hpcd.pData = (void*)HALPriv;
+    hpcd.pData = (void *)HALPriv;
     hpcd.State = HAL_PCD_STATE_RESET;
     HAL_PCD_Init(&hpcd);
 

@@ -22,26 +22,51 @@
 #ifndef MBED_FLASHIAP_H
 #define MBED_FLASHIAP_H
 
-#if defined (DEVICE_FLASH) || defined(DOXYGEN_ONLY)
+#if DEVICE_FLASH || defined(DOXYGEN_ONLY)
 
 #include "flash_api.h"
 #include "platform/SingletonPtr.h"
 #include "platform/PlatformMutex.h"
 #include "platform/NonCopyable.h"
+#include <algorithm>
+
+// Export ROM end address
+#if defined(TOOLCHAIN_GCC_ARM)
+extern uint32_t __etext;
+extern uint32_t __data_start__;
+extern uint32_t __data_end__;
+#define FLASHIAP_APP_ROM_END_ADDR (((uint32_t) &__etext) + ((uint32_t) &__data_end__) - ((uint32_t) &__data_start__))
+#elif defined(TOOLCHAIN_ARM)
+extern uint32_t Load$$LR$$LR_IROM1$$Limit[];
+#define FLASHIAP_APP_ROM_END_ADDR ((uint32_t)Load$$LR$$LR_IROM1$$Limit)
+#elif defined(TOOLCHAIN_IAR)
+#pragma section=".rodata"
+#pragma section=".text"
+#pragma section=".init_array"
+#define FLASHIAP_APP_ROM_END_ADDR std::max(std::max((uint32_t) __section_end(".rodata"), (uint32_t) __section_end(".text")), \
+                                  (uint32_t) __section_end(".init_array"))
+#endif
 
 namespace mbed {
 
-/** \addtogroup drivers */
+/** \addtogroup drivers-public-api */
+/** @{*/
+
+/**
+ * \defgroup drivers_FlashIAP FlashIAP class
+ * @{
+ */
 
 /** Flash IAP driver. It invokes flash HAL functions.
  *
  * @note Synchronization level: Thread safe
- * @ingroup drivers
  */
 class FlashIAP : private NonCopyable<FlashIAP> {
 public:
-    FlashIAP();
-    ~FlashIAP();
+    constexpr FlashIAP() : _flash(), _page_buf(nullptr)
+    {
+
+    }
 
     /** Initialize a flash IAP device
      *
@@ -56,7 +81,7 @@ public:
      */
     int deinit();
 
-    /** Read data from a flash device. 
+    /** Read data from a flash device.
      *
      *  This method invokes memcpy - reads number of bytes from the address
      *
@@ -72,8 +97,8 @@ public:
      *  The sectors must have been erased prior to being programmed
      *
      *  @param buffer Buffer of data to be written
-     *  @param addr   Address of a page to begin writing to, must be a multiple of program and sector sizes
-     *  @param size   Size to write in bytes, must be a multiple of program and sector sizes
+     *  @param addr   Address of a page to begin writing to
+     *  @param size   Size to write in bytes, must be a multiple of program size
      *  @return       0 on success, negative error code on failure
      */
     int program(const void *buffer, uint32_t addr, uint32_t size);
@@ -90,7 +115,7 @@ public:
 
     /** Get the sector size at the defined address
      *
-     *  Sector size might differ at address ranges. 
+     *  Sector size might differ at address ranges.
      *  An example <0-0x1000, sector size=1024; 0x10000-0x20000, size=2048>
      *
      *  @param addr Address of or inside the sector to query
@@ -98,15 +123,15 @@ public:
      */
     uint32_t get_sector_size(uint32_t addr) const;
 
-    /** Get the flash start address 
+    /** Get the flash start address
      *
-     *  @return Flash start address 
+     *  @return Flash start address
      */
     uint32_t get_flash_start() const;
 
     /** Get the flash size
      *
-     *  @return Flash size 
+     *  @return Flash size
      */
     uint32_t get_flash_size() const;
 
@@ -117,6 +142,14 @@ public:
      */
     uint32_t get_page_size() const;
 
+    /** Get the flash erase value
+     *
+     *  Get the value we read after erase operation
+     *  @return flash erase value
+     */
+    uint8_t get_erase_value() const;
+
+#if !defined(DOXYGEN_ONLY)
 private:
 
     /* Check if address and size are aligned to a sector
@@ -128,8 +161,13 @@ private:
     bool is_aligned_to_sector(uint32_t addr, uint32_t size);
 
     flash_t _flash;
+    uint8_t *_page_buf;
     static SingletonPtr<PlatformMutex> _mutex;
+#endif
 };
+
+/** @}*/
+/** @}*/
 
 } /* namespace mbed */
 

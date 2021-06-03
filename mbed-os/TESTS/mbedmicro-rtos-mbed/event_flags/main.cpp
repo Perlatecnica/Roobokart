@@ -14,6 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#if defined(MBED_RTOS_SINGLE_THREAD) || !defined(MBED_CONF_RTOS_PRESENT)
+#error [NOT_SUPPORTED] Event flags test cases require RTOS with multithread to run
+#else
 
 #include "mbed.h"
 #include "greentea-client/test_env.h"
@@ -22,11 +25,15 @@
 
 using utest::v1::Case;
 
-#if defined(MBED_RTOS_SINGLE_THREAD)
-  #error [NOT_SUPPORTED] test not supported
-#endif
+#if !DEVICE_USTICKER
+#error [NOT_SUPPORTED] UsTicker need to be enabled for this test.
+#else
 
+#if defined(__CORTEX_M23) || defined(__CORTEX_M33)
+#define THREAD_STACK_SIZE   512
+#else
 #define THREAD_STACK_SIZE   320 /* 512B stack on GCC_ARM compiler cause out of memory on some 16kB RAM boards e.g. NUCLEO_F070RB */
+#endif
 
 #define MAX_FLAG_POS 30
 #define PROHIBITED_FLAG_POS 31
@@ -40,19 +47,6 @@ using utest::v1::Case;
 
 Semaphore sync_sem(0, 1);
 
-/* In order to successfully run this test suite when compiled with --profile=debug
- * error() has to be redefined as noop.
- *
- * EventFlags calls RTX API which uses Event Recorder functionality. When compiled
- * with MBED_TRAP_ERRORS_ENABLED=1 (set in debug profile) EvrRtxEventFlagsError() calls error()
- * which aborts test program.
- */
-#if defined(MBED_TRAP_ERRORS_ENABLED) && MBED_TRAP_ERRORS_ENABLED
-void error(const char* format, ...) {
-    (void) format;
-}
-#endif
-
 template<uint32_t flags, uint32_t wait_ms>
 void send_thread(EventFlags *ef)
 {
@@ -60,7 +54,7 @@ void send_thread(EventFlags *ef)
         const uint32_t flag = flags & (1 << i);
         if (flag) {
             ef->set(flag);
-            Thread::wait(wait_ms);
+            ThisThread::sleep_for(wait_ms);
         }
     }
 }
@@ -71,9 +65,9 @@ void send_thread_sync(EventFlags *ef)
     for (uint32_t i = 0; i <= MAX_FLAG_POS; i++) {
         const uint32_t flag = flags & (1 << i);
         if (flag) {
-            sync_sem.wait();
+            sync_sem.acquire();
             ef->set(flag);
-            Thread::wait(wait_ms);
+            ThisThread::sleep_for(wait_ms);
         }
     }
 }
@@ -152,14 +146,18 @@ void test_prohibited(void)
 
     ev.set(FLAG01 | FLAG02 | FLAG03);
 
+#if !MBED_TRAP_ERRORS_ENABLED
     flags = ev.clear(PROHIBITED_FLAG);
     TEST_ASSERT_EQUAL(osFlagsErrorParameter, flags);
+#endif
 
     flags = ev.get();
     TEST_ASSERT_EQUAL(FLAG01 | FLAG02 | FLAG03, flags);
 
+#if !MBED_TRAP_ERRORS_ENABLED
     flags = ev.set(PROHIBITED_FLAG);
     TEST_ASSERT_EQUAL(osFlagsErrorParameter, flags);
+#endif
 
     flags = ev.get();
     TEST_ASSERT_EQUAL(FLAG01 | FLAG02 | FLAG03, flags);
@@ -264,7 +262,7 @@ void test_multi_thread_any_timeout(void)
     EventFlags ef;
     uint32_t ret;
     Thread thread(osPriorityNormal, THREAD_STACK_SIZE);
-    thread.start(callback(send_thread_sync<FLAG01 | FLAG02 | FLAG03, 1>, &ef));
+    thread.start(callback(send_thread_sync < FLAG01 | FLAG02 | FLAG03, 1 >, &ef));
 
     for (int i = 0; i <= MAX_FLAG_POS; i++) {
         uint32_t flag = 1 << i;
@@ -375,3 +373,6 @@ int main()
 {
     return !utest::v1::Harness::run(specification);
 }
+
+#endif // !DEVICE_USTICKER
+#endif // defined(MBED_RTOS_SINGLE_THREAD) || !defined(MBED_CONF_RTOS_PRESENT)

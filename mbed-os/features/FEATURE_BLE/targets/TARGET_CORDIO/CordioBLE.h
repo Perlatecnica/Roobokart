@@ -22,12 +22,19 @@
 #include "ble/BLEInstanceBase.h"
 
 #include "CordioHCIDriver.h"
-#include "CordioGap.h"
 #include "CordioGattServer.h"
-#include "CordioSecurityManager.h"
 #include "CordioPalAttClient.h"
 #include "ble/pal/AttClientToGattClientAdapter.h"
 #include "ble/generic/GenericGattClient.h"
+#include "CordioPalGap.h"
+#include "CordioPalGenericAccessService.h"
+#include "ble/generic/GenericGap.h"
+#include "ble/generic/GenericSecurityManager.h"
+#include "SimpleEventQueue.h"
+#include "drivers/LowPowerTimer.h"
+#include "SigningMonitorProxy.h"
+#include "CordioPalSecurityManager.h"
+#include "BleImplementationForward.h"
 
 namespace ble {
 namespace vendor {
@@ -81,13 +88,14 @@ public:
     /**
      * @see BLEInstanceBase::getGap
      */
-    virtual Gap& getGap();
+    virtual impl::GenericGapImpl& getGap();
 
     /**
      * @see BLEInstanceBase::getGap
      */
-    virtual const Gap& getGap() const;
+    virtual const impl::GenericGapImpl& getGap() const;
 
+#if BLE_FEATURE_GATT_SERVER
     /**
      * @see BLEInstanceBase::getGattServer
      */
@@ -97,12 +105,23 @@ public:
      * @see BLEInstanceBase::getGattServer
      */
     virtual const GattServer &getGattServer() const;
+#endif // BLE_FEATURE_GATT_SERVER
 
+#if BLE_FEATURE_GATT_CLIENT
     /**
      * @see BLEInstanceBase::getGattClient
      */
-    virtual ::GattClient &getGattClient();
+    virtual impl::GenericGattClientImpl &getGattClient();
 
+    /**
+     * Get the PAL Gatt Client.
+     *
+     * @return PAL Gatt Client.
+     */
+    impl::PalGattClientImpl &getPalGattClient();
+#endif // BLE_FEATURE_GATT_CLIENT
+
+#if BLE_FEATURE_SECURITY
     /**
      * @see BLEInstanceBase::getSecurityManager
      */
@@ -112,6 +131,8 @@ public:
      * @see BLEInstanceBase::getSecurityManager
      */
     virtual const SecurityManager &getSecurityManager() const;
+
+#endif // BLE_FEATURE_SECURITY
 
     /**
      * @see BLEInstanceBase::waitForEvent
@@ -124,6 +145,12 @@ public:
     virtual void processEvents();
 
 private:
+    /**
+     * Return singleton.
+     * @return GenericGap instance.
+     */
+    const impl::GenericGapImpl& getGenericGap() const;
+
     static void stack_handler(wsfEventMask_t event, wsfMsgHdr_t* msg);
     static void device_manager_cb(dmEvt_t* dm_event);
     static void connection_handler(dmEvt_t* dm_event);
@@ -143,6 +170,9 @@ private:
     } initialization_status;
 
     ::BLE::InstanceID_t instanceID;
+    mutable SimpleEventQueue _event_queue;
+    mbed::LowPowerTimer _timer;
+    uint64_t _last_update_us;
 };
 
 } // namespace cordio

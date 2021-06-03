@@ -64,12 +64,13 @@ void pin_function(PinName pin, int data)
     // Get the pin informations
     uint32_t mode  = STM_PIN_FUNCTION(data);
     uint32_t afnum = STM_PIN_AFNUM(data);
+    uint32_t speed = STM_PIN_SPEED(data);
     uint32_t port = STM_PORT(pin);
     uint32_t ll_pin  = ll_pin_defines[STM_PIN(pin)];
     uint32_t ll_mode = 0;
 
     // Enable GPIO clock
-    GPIO_TypeDef *gpio = Set_GPIO_Clock(port);
+    GPIO_TypeDef *const gpio = Set_GPIO_Clock(port);
 
     /*  Set default speed to high.
      *  For most families there are dedicated registers so it is
@@ -77,11 +78,30 @@ void pin_function(PinName pin, int data)
      *  But for families like F1, speed only applies to output.
      */
 #if defined (TARGET_STM32F1)
-if (mode == STM_PIN_OUTPUT) {
+    if (mode == STM_PIN_OUTPUT) {
 #endif
-    LL_GPIO_SetPinSpeed(gpio, ll_pin, LL_GPIO_SPEED_FREQ_HIGH);
+#if defined(DUAL_CORE)
+        while (LL_HSEM_1StepLock(HSEM, CFG_HW_GPIO_SEMID)) {
+        }
+#endif /* DUAL_CORE */
+        switch (speed) {
+            /* Default value for backward compatibility */
+            case STM_PIN_SPEED_MASK:
+#if defined (LL_GPIO_SPEED_FREQ_VERY_HIGH)
+                LL_GPIO_SetPinSpeed(gpio, ll_pin, LL_GPIO_SPEED_FREQ_VERY_HIGH);
+#else
+                LL_GPIO_SetPinSpeed(gpio, ll_pin, LL_GPIO_SPEED_FREQ_HIGH);
+#endif
+                break;
+            default:
+                LL_GPIO_SetPinSpeed(gpio, ll_pin, speed);
+                break;
+        }
+#if defined(DUAL_CORE)
+        LL_HSEM_ReleaseLock(HSEM, CFG_HW_GPIO_SEMID, HSEM_CR_COREID_CURRENT);
+#endif /* DUAL_CORE */
 #if defined (TARGET_STM32F1)
-}
+    }
 #endif
 
     switch (mode) {
@@ -94,7 +114,7 @@ if (mode == STM_PIN_OUTPUT) {
         case STM_PIN_ALTERNATE:
             ll_mode = LL_GPIO_MODE_ALTERNATE;
             // In case of ALT function, also set he afnum
-           stm_pin_SetAFPin(gpio, pin, afnum);
+            stm_pin_SetAFPin(gpio, pin, afnum);
             break;
         case STM_PIN_ANALOG:
             ll_mode = LL_GPIO_MODE_ANALOG;
@@ -103,6 +123,12 @@ if (mode == STM_PIN_OUTPUT) {
             MBED_ASSERT(0);
             break;
     }
+
+#if defined(DUAL_CORE)
+    while (LL_HSEM_1StepLock(HSEM, CFG_HW_GPIO_SEMID)) {
+    }
+#endif /* DUAL_CORE */
+
     LL_GPIO_SetPinMode(gpio, ll_pin, ll_mode);
 
 #if defined(GPIO_ASCR_ASC0)
@@ -115,17 +141,21 @@ if (mode == STM_PIN_OUTPUT) {
 #endif
 
     /*  For now by default use Speed HIGH for output or alt modes */
-    if ((mode == STM_PIN_OUTPUT) ||(mode == STM_PIN_ALTERNATE)) {
-    if (STM_PIN_OD(data)) {
+    if ((mode == STM_PIN_OUTPUT) || (mode == STM_PIN_ALTERNATE)) {
+        if (STM_PIN_OD(data)) {
             LL_GPIO_SetPinOutputType(gpio, ll_pin, LL_GPIO_OUTPUT_OPENDRAIN);
-    } else {
+        } else {
             LL_GPIO_SetPinOutputType(gpio, ll_pin, LL_GPIO_OUTPUT_PUSHPULL);
-    }
+        }
     }
 
     stm_pin_PullConfig(gpio, ll_pin, STM_PIN_PUPD(data));
 
     stm_pin_DisconnectDebug(pin);
+
+#if defined(DUAL_CORE)
+    LL_HSEM_ReleaseLock(HSEM, CFG_HW_GPIO_SEMID, HSEM_CR_COREID_CURRENT);
+#endif /* DUAL_CORE */
 }
 
 /**
@@ -139,10 +169,15 @@ void pin_mode(PinName pin, PinMode mode)
     uint32_t ll_pin  = ll_pin_defines[STM_PIN(pin)];
     // Enable GPIO clock
     GPIO_TypeDef *gpio = Set_GPIO_Clock(port_index);
+
+#if defined(DUAL_CORE)
+    while (LL_HSEM_1StepLock(HSEM, CFG_HW_GPIO_SEMID)) {
+    }
+#endif /* DUAL_CORE */
+
     uint32_t function = LL_GPIO_GetPinMode(gpio, ll_pin);
 
-    if ((function == LL_GPIO_MODE_OUTPUT) || (function == LL_GPIO_MODE_ALTERNATE))
-    {
+    if ((function == LL_GPIO_MODE_OUTPUT) || (function == LL_GPIO_MODE_ALTERNATE)) {
         if ((mode == OpenDrainNoPull) || (mode == OpenDrainPullUp) || (mode == OpenDrainPullDown)) {
             LL_GPIO_SetPinOutputType(gpio, ll_pin, LL_GPIO_OUTPUT_OPENDRAIN);
         } else {
@@ -157,4 +192,8 @@ void pin_mode(PinName pin, PinMode mode)
     } else {
         stm_pin_PullConfig(gpio, ll_pin, GPIO_NOPULL);
     }
+
+#if defined(DUAL_CORE)
+    LL_HSEM_ReleaseLock(HSEM, CFG_HW_GPIO_SEMID, HSEM_CR_COREID_CURRENT);
+#endif /* DUAL_CORE */
 }

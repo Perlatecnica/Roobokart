@@ -1,4 +1,21 @@
-"""Tests for the arm toolchain supported checks"""
+"""
+Copyright (c) 2016-2019 ARM Limited. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations 
+"""
+
 import sys
 import os
 from string import printable
@@ -6,6 +23,8 @@ from copy import deepcopy
 from mock import MagicMock, patch
 from hypothesis import given, settings
 from hypothesis.strategies import text, lists, sampled_from
+
+"""Tests for the arm toolchain supported checks"""
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..",
                                     ".."))
@@ -17,7 +36,7 @@ from tools.utils import NotSupportedException
 ARMC5_CORES = ["Cortex-M0", "Cortex-M0+", "Cortex-M3", "Cortex-M4",
                "Cortex-M4F", "Cortex-M7", "Cortex-M7F", "Cortex-M7FD"]
 ARMC6_CORES = ARMC5_CORES + ["Cortex-M23", "Cortex-M23-NS",
-                             "Cortex-M33", "CortexM33-NS"]
+                             "Cortex-M33", "Cortex-M33-NS", "Cortex-M33F", "Cortex-M33F-NS"]
 
 CORE_SUF_ALPHA = ["MDFNS02347-+"]
 

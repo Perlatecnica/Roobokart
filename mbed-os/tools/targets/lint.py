@@ -29,6 +29,7 @@ if __name__ == "__main__":
 from copy import copy
 from yaml import dump_all
 import argparse
+from past.builtins import basestring
 
 from tools.targets import Target, set_targets_json_location, TARGET_MAP
 
@@ -79,10 +80,10 @@ def check_inherits(dict):
 
 DEVICE_HAS_ALLOWED = ["ANALOGIN", "ANALOGOUT", "CAN", "ETHERNET", "EMAC",
                       "FLASH", "I2C", "I2CSLAVE", "I2C_ASYNCH", "INTERRUPTIN",
-                      "LOWPOWERTIMER", "PORTIN", "PORTINOUT", "PORTOUT",
+                      "LPTICKER", "PORTIN", "PORTINOUT", "PORTOUT",
                       "PWMOUT", "RTC", "TRNG","SERIAL", "SERIAL_ASYNCH",
                       "SERIAL_FC", "SLEEP", "SPI", "SPI_ASYNCH", "SPISLAVE",
-                      "STORAGE", "STCLK_OFF_DURING_SLEEP"]
+                      "STORAGE", "SYSTICK_CLK_OFF_DURING_SLEEP"]
 def check_device_has(dict):
     for name in dict.get("device_has", []):
         if name not in DEVICE_HAS_ALLOWED:
@@ -163,7 +164,7 @@ BOARD_FORMAT_STRING = {1: "Board (%s)",
 def _generate_hierarchy_string(mcus, boards):
     global_errors = []
     if len(mcus) < 1:
-        global_errors.append("No MCUS found in heirarchy")
+        global_errors.append("No MCUS found in hierarchy")
         mcus_string = "??? ->"
     elif len(mcus) > 3:
         global_errors.append("No name for targets %s" % ", ".join(mcus[3:]))
@@ -174,7 +175,7 @@ def _generate_hierarchy_string(mcus, boards):
         mcus_string = MCU_FORMAT_STRING[len(mcus)] % tuple(mcus)
 
     if len(boards) < 1:
-        global_errors.append("no boards found in heirarchy")
+        global_errors.append("no boards found in hierarchy")
         boards_string = "???"
     elif len(boards) > 2:
         global_errors.append("no name for targets %s" % ", ".join(boards[2:]))
@@ -187,7 +188,7 @@ def _generate_hierarchy_string(mcus, boards):
 
 
 def check_hierarchy(tgt):
-    """Atempts to assign labels to the heirarchy"""
+    """Atempts to assign labels to the hierarchy"""
     resolution_order = copy(tgt.resolution_order_names[:-1])
     mcus, boards = _split_boards(resolution_order, tgt)
 
@@ -246,14 +247,14 @@ def subcommand(name, *args, **kwargs):
                  choices=TARGET_MAP.keys(), type=str.upper))
 def targets_cmd(mcus=[]):
     """Find and print errors about specific targets"""
-    print dump_all([check_hierarchy(TARGET_MAP[m]) for m in mcus],
-                   default_flow_style=False)
+    print(dump_all([check_hierarchy(TARGET_MAP[m]) for m in mcus],
+                   default_flow_style=False))
 
 @subcommand("all-targets")
 def all_targets_cmd():
     """Print all errors about all parts"""
-    print dump_all([check_hierarchy(m) for m in TARGET_MAP.values()],
-                   default_flow_style=False)
+    print(dump_all([check_hierarchy(m) for m in list(TARGET_MAP.values())],
+                   default_flow_style=False))
 
 @subcommand("orphans")
 def orphans_cmd():
@@ -264,7 +265,7 @@ def orphans_cmd():
             if name in orphans:
                 orphans.remove(name)
     if orphans:
-        print dump_all([orphans], default_flow_style=False)
+        print(dump_all([orphans], default_flow_style=False))
     return len(orphans)
 
 def main():
@@ -274,4 +275,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-

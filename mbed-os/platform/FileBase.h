@@ -1,5 +1,6 @@
 /* mbed Microcontroller Library
- * Copyright (c) 2006-2013 ARM Limited
+ * Copyright (c) 2006-2019 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,51 +19,58 @@
 
 typedef int FILEHANDLE;
 
-#include <cstdio>
-#include <cstring>
-
 #include "platform/platform.h"
 #include "platform/SingletonPtr.h"
 #include "platform/PlatformMutex.h"
 #include "platform/NonCopyable.h"
 
 namespace mbed {
-/** \addtogroup platform */
-/** @{*/
 
 typedef enum {
     FilePathType,
     FileSystemPathType
 } PathType;
-/** @}*/
+
+/** \defgroup platform-public-api-file File
+ * \ingroup platform-public-api
+ */
 
 /**
- * @class FileBase
- * @ingroup platform
+ * \defgroup platform_FileBase FileBase class
+ * \ingroup platform-public-api-file
+ * @{
  */
+
+/** Class FileBase
+ *
+ */
+
 class FileBase : private NonCopyable<FileBase> {
 public:
     FileBase(const char *name, PathType t);
     virtual ~FileBase();
 
-    const char* getName(void);
+    const char *getName(void);
     PathType    getPathType(void);
 
     static FileBase *lookup(const char *name, unsigned int len);
 
     static FileBase *get(int n);
 
-    /* disallow copy constructor and assignment operators */
+    void set_as_default();
+
 private:
     static FileBase *_head;
+    static FileBase *_default;
     static SingletonPtr<PlatformMutex> _mutex;
 
     FileBase   *_next;
-    const char * const _name;
+    const char *const _name;
     const PathType _path_type;
 };
+
+/**@}*/
 
 } // namespace mbed
 
 #endif
-

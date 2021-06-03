@@ -1,5 +1,5 @@
 /* mbed Microcontroller Library
- * Copyright (c) 2017 ARM Limited
+ * Copyright (c) 2017-2019 ARM Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,45 +15,60 @@
  */
 #include "mbed_events.h"
 #include "mbed.h"
-#include "rtos.h"
 #include "greentea-client/test_env.h"
 #include "unity.h"
 #include "utest.h"
 
+#if !DEVICE_USTICKER
+#error [NOT_SUPPORTED] test not supported
+#else
+
 using namespace utest::v1;
 
-#define TEST_EQUEUE_SIZE 1024
+// Assume that tolerance is 5% of measured time.
+#define DELTA(ms) (ms / 20)
+
+// TEST_EQUEUE_SIZE was reduced below 1024B to fit this test to devices with small RAM (RAM <= 16kB)
+// additionally TEST_EQUEUE_SIZE was expressed in EVENTS_EVENT_SIZE to increase readability
+// (for more details about EVENTS_EVENT_SIZE see EventQueue constructor)
+#define TEST_EQUEUE_SIZE (18*EVENTS_EVENT_SIZE)
 
 // flag for called
 volatile bool touched = false;
 
 // static functions
-void func5(int a0, int a1, int a2, int a3, int a4) { 
+void func5(int a0, int a1, int a2, int a3, int a4)
+{
     touched = true;
     TEST_ASSERT_EQUAL(a0 | a1 | a2 | a3 | a4, 0x1f);
 }
 
-void func4(int a0, int a1, int a2, int a3) {
+void func4(int a0, int a1, int a2, int a3)
+{
     touched = true;
-    TEST_ASSERT_EQUAL(a0 | a1 | a2 | a3, 0xf); 
+    TEST_ASSERT_EQUAL(a0 | a1 | a2 | a3, 0xf);
 }
 
-void func3(int a0, int a1, int a2) {
+void func3(int a0, int a1, int a2)
+{
     touched = true;
     TEST_ASSERT_EQUAL(a0 | a1 | a2, 0x7);
 }
 
-void func2(int a0, int a1) {
+void func2(int a0, int a1)
+{
     touched = true;
     TEST_ASSERT_EQUAL(a0 | a1, 0x3);
 }
 
-void func1(int a0) {
+void func1(int a0)
+{
     touched = true;
     TEST_ASSERT_EQUAL(a0, 0x1);
 }
 
-void func0() {
+void func0()
+{
     touched = true;
 }
 
@@ -85,40 +100,44 @@ SIMPLE_POSTS_TEST(1, 0x01)
 SIMPLE_POSTS_TEST(0)
 
 
-void time_func(Timer *t, int ms) {
-    TEST_ASSERT_INT_WITHIN(5, ms, t->read_ms());
+void time_func(Timer *t, int ms)
+{
+    TEST_ASSERT_INT_WITHIN(DELTA(ms), ms, t->read_ms());
     t->reset();
 }
 
 template <int N>
-void call_in_test() {
+void call_in_test()
+{
     Timer tickers[N];
 
     EventQueue queue(TEST_EQUEUE_SIZE);
 
     for (int i = 0; i < N; i++) {
         tickers[i].start();
-        queue.call_in((i+1)*100, time_func, &tickers[i], (i+1)*100);
+        queue.call_in((i + 1) * 100, time_func, &tickers[i], (i + 1) * 100);
     }
 
-    queue.dispatch(N*100);
+    queue.dispatch(N * 100);
 }
 
 template <int N>
-void call_every_test() {
+void call_every_test()
+{
     Timer tickers[N];
 
     EventQueue queue(TEST_EQUEUE_SIZE);
 
     for (int i = 0; i < N; i++) {
         tickers[i].start();
-        queue.call_every((i+1)*100, time_func, &tickers[i], (i+1)*100);
+        queue.call_every((i + 1) * 100, time_func, &tickers[i], (i + 1) * 100);
     }
 
-    queue.dispatch(N*100);
+    queue.dispatch(N * 100);
 }
 
-void allocate_failure_test() {
+void allocate_failure_test()
+{
     EventQueue queue(TEST_EQUEUE_SIZE);
     int id;
 
@@ -129,12 +148,14 @@ void allocate_failure_test() {
     TEST_ASSERT(!id);
 }
 
-void no() {
+void no()
+{
     TEST_ASSERT(false);
 }
 
 template <int N>
-void cancel_test1() {
+void cancel_test1()
+{
     EventQueue queue(TEST_EQUEUE_SIZE);
 
     int ids[N];
@@ -143,7 +164,7 @@ void cancel_test1() {
         ids[i] = queue.call_in(1000, no);
     }
 
-    for (int i = N-1; i >= 0; i--) {
+    for (int i = N - 1; i >= 0; i--) {
         queue.cancel(ids[i]);
     }
 
@@ -154,31 +175,38 @@ void cancel_test1() {
 // Testing the dynamic arguments to the event class
 unsigned counter = 0;
 
-void count5(unsigned a0, unsigned a1, unsigned a2, unsigned a3, unsigned a5) {
+void count5(unsigned a0, unsigned a1, unsigned a2, unsigned a3, unsigned a5)
+{
     counter += a0 + a1 + a2 + a3 + a5;
 }
 
-void count4(unsigned a0, unsigned a1, unsigned a2, unsigned a3) {
+void count4(unsigned a0, unsigned a1, unsigned a2, unsigned a3)
+{
     counter += a0 + a1 + a2 + a3;
 }
 
-void count3(unsigned a0, unsigned a1, unsigned a2) {
+void count3(unsigned a0, unsigned a1, unsigned a2)
+{
     counter += a0 + a1 + a2;
 }
 
-void count2(unsigned a0, unsigned a1) {
+void count2(unsigned a0, unsigned a1)
+{
     counter += a0 + a1;
 }
 
-void count1(unsigned a0) {
+void count1(unsigned a0)
+{
     counter += a0;
 }
 
-void count0() {
+void count0()
+{
     counter += 0;
 }
 
-void event_class_test() {
+void event_class_test()
+{
     counter = 0;
     EventQueue queue(TEST_EQUEUE_SIZE);
 
@@ -201,7 +229,8 @@ void event_class_test() {
     TEST_ASSERT_EQUAL(counter, 30);
 }
 
-void event_class_helper_test() {
+void event_class_helper_test()
+{
     counter = 0;
     EventQueue queue(TEST_EQUEUE_SIZE);
 
@@ -224,7 +253,8 @@ void event_class_helper_test() {
     TEST_ASSERT_EQUAL(counter, 15);
 }
 
-void event_inference_test() {
+void event_inference_test()
+{
     counter = 0;
     EventQueue queue(TEST_EQUEUE_SIZE);
 
@@ -247,9 +277,192 @@ void event_inference_test() {
     TEST_ASSERT_EQUAL(counter, 60);
 }
 
+int timeleft_events[2];
+
+void check_time_left(EventQueue *queue, int index, int expected)
+{
+    const int event_id = timeleft_events[index];
+    TEST_ASSERT_INT_WITHIN(2, expected, queue->time_left(event_id));
+    touched = true;
+}
+
+void time_left(EventQueue *queue, int index)
+{
+    const int event_id = timeleft_events[index];
+    TEST_ASSERT_EQUAL(0, queue->time_left(event_id));
+}
+
+void time_left_test()
+{
+    EventQueue queue(TEST_EQUEUE_SIZE);
+
+    // Enque check events
+    TEST_ASSERT(queue.call_in(50, check_time_left, &queue, 0, 100 - 50));
+    TEST_ASSERT(queue.call_in(200, check_time_left, &queue, 1, 200 - 200));
+
+    // Enque events to be checked
+    timeleft_events[0] = queue.call_in(100, time_left, &queue, 0);
+    timeleft_events[1] = queue.call_in(200, time_left, &queue, 1);
+    TEST_ASSERT(timeleft_events[0]);
+    TEST_ASSERT(timeleft_events[1]);
+
+    queue.dispatch(300);
+
+    // Ensure check was called
+    TEST_ASSERT(touched);
+    touched = false;
+
+    int id = queue.call(func0);
+    TEST_ASSERT(id);
+    TEST_ASSERT_EQUAL(0, queue.time_left(id));
+    queue.dispatch(10);
+
+    // Test invalid event id
+    TEST_ASSERT_EQUAL(-1, queue.time_left(0));
+}
+
+void f5(int a1, int a2, int a3, int a4, int a5)
+{
+    touched = true;
+}
+
+class EventTest {
+public:
+    EventTest() : counter() {}
+    void f0()
+    {
+        counter++;
+    }
+    void f1(int a)
+    {
+        counter += a;
+    }
+    void f5(int a, int b, int c, int d, int e)
+    {
+        counter += a + b + c + d + e;
+    }
+    uint32_t counter;
+};
+
+/** Test that queue executes both dynamic and user allocated events.
+ *
+ *  Given queue is initialized and its size is set to store three Event at max in its internal memory.
+ *      When post queue allocated event.
+ *      Then only three event can be posted due to queue memory size.
+ *      When post user allocated evens.
+ *      Then number of posted events is not limited by queue memory size.
+ *      When both Event and UserAllocatedEvent are posted and queue dispatch is called.
+ *      Then both types of events are executed properly.
+ *
+ */
+void mixed_dynamic_static_events_queue_test()
+{
+    {
+        EventQueue queue(9 * EVENTS_EVENT_SIZE);
+
+        EventTest e1_test;
+        Event<void()> e1 = queue.event(&e1_test, &EventTest::f0);
+        int id1 =  e1.post();
+        TEST_ASSERT_NOT_EQUAL(0, id1);
+        EventTest e2_test;
+        Event<void()> e2 = queue.event(&e2_test, &EventTest::f1, 3);
+        int id2 = e2.post();
+        TEST_ASSERT_NOT_EQUAL(0, id2);
+        EventTest e3_test;
+        Event<void()> e3 = queue.event(&e3_test, &EventTest::f5, 1, 2, 3, 4, 5);
+        int id3 = e3.post();
+        TEST_ASSERT_NOT_EQUAL(0, id3);
+
+
+        auto ue0 = make_user_allocated_event(func0);
+        EventTest ue1_test;
+        auto ue1 = make_user_allocated_event(&ue1_test, &EventTest::f0);
+        EventTest ue2_test;
+        auto ue2 = make_user_allocated_event(&ue2_test, &EventTest::f1, 3);
+        EventTest ue3_test;
+        auto ue3 = make_user_allocated_event(&ue3_test, &EventTest::f5, 1, 2, 3, 4, 5);
+        EventTest ue4_test;
+        auto ue4 = make_user_allocated_event(&ue4_test, &EventTest::f5, 1, 2, 3, 4, 5);
+
+        touched = false;
+
+        ue0.call_on(&queue);
+        TEST_ASSERT_EQUAL(false, ue0.try_call());
+        ue1.call_on(&queue);
+        TEST_ASSERT_EQUAL(false, ue1.try_call());
+        ue2.call_on(&queue);
+        TEST_ASSERT_EQUAL(false, ue2.try_call());
+        ue3.call_on(&queue);
+        TEST_ASSERT_EQUAL(false, ue3.try_call());
+        ue4.call_on(&queue);
+        ue4.cancel();
+        TEST_ASSERT_EQUAL(true, ue4.try_call());
+        ue4.cancel();
+        e2.cancel();
+
+        queue.dispatch(1);
+
+        TEST_ASSERT_EQUAL(true, touched);
+        TEST_ASSERT_EQUAL(1, ue1_test.counter);
+        TEST_ASSERT_EQUAL(3, ue2_test.counter);
+        TEST_ASSERT_EQUAL(15, ue3_test.counter);
+        TEST_ASSERT_EQUAL(0, ue4_test.counter);
+        TEST_ASSERT_EQUAL(1, e1_test.counter);
+        TEST_ASSERT_EQUAL(0, e2_test.counter);
+        TEST_ASSERT_EQUAL(15, e3_test.counter);
+    }
+}
+
+
+static EventQueue g_queue(0);
+
+/** Test that static queue executes user allocated events.
+ *
+ *  Given static queue is initialized
+ *      When post user allocated evens.
+ *      Then UserAllocatedEvent are posted and dispatched without any error.
+ */
+void static_events_queue_test()
+{
+    // check that no dynamic event can be posted
+    Event<void()> e0 = g_queue.event(func0);
+    TEST_ASSERT_EQUAL(0, e0.post());
+
+    auto ue0 = g_queue.make_user_allocated_event(func0);
+    EventTest test1;
+    auto ue1 = make_user_allocated_event(&test1, &EventTest::f0);
+    EventTest test2;
+    auto ue2 = g_queue.make_user_allocated_event(&test2, &EventTest::f1, 3);
+    EventTest test3;
+    auto ue3 = make_user_allocated_event(&test3, &EventTest::f5, 1, 2, 3, 4, 5);
+    EventTest test4;
+    auto ue4 = g_queue.make_user_allocated_event(&test4, &EventTest::f5, 1, 2, 3, 4, 5);
+
+    ue0.call();
+    TEST_ASSERT_EQUAL(false, ue0.try_call());
+    ue1.call_on(&g_queue);
+    TEST_ASSERT_EQUAL(false, ue1.try_call());
+    ue2();
+    TEST_ASSERT_EQUAL(false, ue2.try_call());
+    ue3.call_on(&g_queue);
+    TEST_ASSERT_EQUAL(false, ue3.try_call());
+    ue4.call();
+    ue4.cancel();
+    TEST_ASSERT_EQUAL(true, ue4.try_call());
+    g_queue.cancel(&ue4);
+
+    g_queue.dispatch(1);
+
+    TEST_ASSERT_EQUAL(1, test1.counter);
+    TEST_ASSERT_EQUAL(3, test2.counter);
+    TEST_ASSERT_EQUAL(15, test3.counter);
+    TEST_ASSERT_EQUAL(0, test4.counter);
+
+}
 
 // Test setup
-utest::v1::status_t test_setup(const size_t number_of_cases) {
+utest::v1::status_t test_setup(const size_t number_of_cases)
+{
     GREENTEA_SETUP(20, "default_auto");
     return verbose_test_setup_handler(number_of_cases);
 }
@@ -271,11 +484,18 @@ const Case cases[] = {
     Case("Testing the event class", event_class_test),
     Case("Testing the event class helpers", event_class_helper_test),
     Case("Testing the event inference", event_inference_test),
+
+    Case("Testing time_left", time_left_test),
+    Case("Testing mixed dynamic & static events queue", mixed_dynamic_static_events_queue_test),
+    Case("Testing static events queue", static_events_queue_test)
+
 };
 
 Specification specification(test_setup, cases);
 
-int main() {
+int main()
+{
     return !Harness::run(specification);
 }
 
+#endif // !DEVICE_USTICKER

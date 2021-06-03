@@ -1,8 +1,6 @@
-;******************** (C) COPYRIGHT 2016 STMicroelectronics ********************
+;******************** (C) COPYRIGHT 2017 STMicroelectronics ********************
 ;* File Name          : startup_stm32f439xx.s
 ;* Author             : MCD Application Team
-;* Version            : V2.6.0
-;* Date               : 04-November-2016
 ;* Description        : STM32F439x devices vector table for MDK-ARM toolchain. 
 ;*                      This module performs:
 ;*                      - Set the initial SP
@@ -39,8 +37,6 @@
 ; 
 ;*******************************************************************************
 
-__initial_sp    EQU     0x20030000 ; Top of RAM
-
                 PRESERVE8
                 THUMB
 
@@ -50,8 +46,9 @@ __initial_sp    EQU     0x20030000 ; Top of RAM
                 EXPORT  __Vectors
                 EXPORT  __Vectors_End
                 EXPORT  __Vectors_Size
+                IMPORT  |Image$$ARM_LIB_STACK$$ZI$$Limit|
 
-__Vectors       DCD     __initial_sp               ; Top of Stack
+__Vectors       DCD     |Image$$ARM_LIB_STACK$$ZI$$Limit| ; Top of Stack
                 DCD     Reset_Handler              ; Reset Handler
                 DCD     NMI_Handler                ; NMI Handler
                 DCD     HardFault_Handler          ; Hard Fault Handler

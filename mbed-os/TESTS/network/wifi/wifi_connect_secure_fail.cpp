@@ -23,12 +23,20 @@
 
 using namespace utest::v1;
 
+#if defined(MBED_CONF_APP_WIFI_SECURE_SSID)
+
 void wifi_connect_secure_fail(void)
 {
     WiFiInterface *wifi = get_interface();
 
-    TEST_ASSERT_EQUAL_INT(NSAPI_ERROR_OK, wifi->set_credentials(MBED_CONF_APP_WIFI_SECURE_SSID, "aaaaaaaa", NSAPI_SECURITY_WPA2));
+    TEST_ASSERT_EQUAL_INT(NSAPI_ERROR_OK, wifi->set_credentials(MBED_CONF_APP_WIFI_SECURE_SSID, "aaaaaaaa", get_security()));
+    nsapi_error_t error;
+    error = wifi->connect();
+    wifi->disconnect();
+    TEST_ASSERT(error == NSAPI_ERROR_AUTH_FAILURE ||
+                error == NSAPI_ERROR_CONNECTION_TIMEOUT ||
+                error == NSAPI_ERROR_NO_CONNECTION);
 
-    TEST_ASSERT_EQUAL_INT(NSAPI_ERROR_AUTH_FAILURE, wifi->connect());
 }
 
+#endif // defined(MBED_CONF_APP_WIFI_SECURE_SSID)

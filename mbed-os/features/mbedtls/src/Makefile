@@ -2,7 +2,7 @@
 # Also see "include/mbedtls/config.h"
 
 CFLAGS	?= -O2
-WARNING_CFLAGS ?=  -Wall -W -Wdeclaration-after-statement
+WARNING_CFLAGS ?=  -Wall -Wextra
 LDFLAGS ?=
 
 LOCAL_CFLAGS = $(WARNING_CFLAGS) -I../include -D_FILE_OFFSET_BITS=64
@@ -21,6 +21,10 @@ endif
 # if were running on Windows build for Windows
 ifdef WINDOWS
 WINDOWS_BUILD=1
+else ifeq ($(shell uname -s),Darwin)
+ifeq ($(AR),ar)
+APPLE_BUILD ?= 1
+endif
 endif
 
 # To compile as a shared library:
@@ -31,38 +35,40 @@ LOCAL_CFLAGS += -fPIC -fpic
 endif
 endif
 
-SOEXT_TLS=so.10
-SOEXT_X509=so.0
-SOEXT_CRYPTO=so.0
+SOEXT_TLS=so.13
+SOEXT_X509=so.1
+SOEXT_CRYPTO=so.4
 
-DLEXT=so
-# OSX shared library extension:
-# DLEXT=dylib
+# Set AR_DASH= (empty string) to use an ar implementation that does not accept
+# the - prefix for command line options (e.g. llvm-ar)
+AR_DASH ?= -
 
-# Windows shared library extension:
-ifdef WINDOWS_BUILD
-DLEXT=dll
+ARFLAGS = $(AR_DASH)src
+ifdef APPLE_BUILD
+ifneq ($(APPLE_BUILD),0)
+ARFLAGS = $(AR_DASH)Src
+RLFLAGS = -no_warning_for_no_symbols -c
+RL ?= ranlib
+endif
 endif
 
-OBJS_CRYPTO=	aes.o		aesni.o		arc4.o		\
-		asn1parse.o	asn1write.o	base64.o	\
-		bignum.o	blowfish.o	camellia.o	\
-		ccm.o		cipher.o	cipher_wrap.o	\
-		cmac.o		ctr_drbg.o	des.o		\
-		dhm.o		ecdh.o		ecdsa.o		\
-		ecjpake.o	ecp.o				\
-		ecp_curves.o	entropy.o	entropy_poll.o	\
-		error.o		gcm.o		havege.o	\
-		hmac_drbg.o	md.o		md2.o		\
-		md4.o		md5.o		md_wrap.o	\
-		memory_buffer_alloc.o		oid.o		\
-		padlock.o	pem.o		pk.o		\
-		pk_wrap.o	pkcs12.o	pkcs5.o		\
-		pkparse.o	pkwrite.o	platform.o	\
-		ripemd160.o	rsa.o		sha1.o		\
-		sha256.o	sha512.o	threading.o	\
-		timing.o	version.o			\
-		version_features.o		xtea.o
+DLEXT ?= so
+ifdef WINDOWS_BUILD
+# Windows shared library extension:
+DLEXT = dll
+else ifdef APPLE_BUILD
+ifneq ($(APPLE_BUILD),0)
+# Mac OS X shared library extension:
+DLEXT = dylib
+endif
+endif
+
+
+
+# Look in crypto for libmbedcrypto.
+LOCAL_LDFLAGS += -L../crypto/library
+LOCAL_CFLAGS += -I../crypto/include
+CRYPTO := ../crypto/library/
 
 OBJS_X509=	certs.o		pkcs11.o	x509.o		\
 		x509_create.o	x509_crl.o	x509_crt.o	\
@@ -71,8 +77,15 @@ OBJS_X509=	certs.o		pkcs11.o	x509.o		\
 OBJS_TLS=	debug.o		net_sockets.o		\
 		ssl_cache.o	ssl_ciphersuites.o	\
 		ssl_cli.o	ssl_cookie.o		\
+		ssl_msg.o				\
 		ssl_srv.o	ssl_ticket.o		\
 		ssl_tls.o
+
+INCLUDING_FROM_MBEDTLS:=1
+include ../crypto/3rdparty/Makefile.inc
+LOCAL_CFLAGS += $(patsubst -I../3rdparty/%, -I../crypto/3rdparty/%, $(THIRDPARTY_INCLUDES))
+OBJS_CRYPTO  += $(patsubst ../3rdparty/%, ../crypto/3rdparty/%, $(THIRDPARTY_CRYPTO_OBJECTS))
+
 
 .SILENT:
 
@@ -91,9 +104,13 @@ shared: libmbedcrypto.$(DLEXT) libmbedx509.$(DLEXT) libmbedtls.$(DLEXT)
 # tls
 libmbedtls.a: $(OBJS_TLS)
 	echo "  AR    $@"
-	$(AR) -rc $@ $(OBJS_TLS)
+	$(AR) $(ARFLAGS) $@ $(OBJS_TLS)
+ifdef APPLE_BUILD
+ifneq ($(APPLE_BUILD),0)
 	echo "  RL    $@"
-	$(AR) -s $@
+	$(RL) $(RLFLAGS) $@
+endif
+endif
 
 libmbedtls.$(SOEXT_TLS): $(OBJS_TLS) libmbedx509.so
 	echo "  LD    $@"
@@ -103,9 +120,9 @@ libmbedtls.so: libmbedtls.$(SOEXT_TLS)
 	echo "  LN    $@ -> $<"
 	ln -sf $< $@
 
-libmbedtls.dylib: $(OBJS_TLS)
+libmbedtls.dylib: $(OBJS_TLS) libmbedx509.dylib
 	echo "  LD    $@"
-	$(CC) -dynamiclib $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@ $(OBJS_TLS)
+	$(CC) -dynamiclib -L. -lmbedcrypto -lmbedx509 $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@ $(OBJS_TLS)
 
 libmbedtls.dll: $(OBJS_TLS) libmbedx509.dll
 	echo "  LD    $@"
@@ -114,11 +131,15 @@ libmbedtls.dll: $(OBJS_TLS) libmbedx509.dll
 # x509
 libmbedx509.a: $(OBJS_X509)
 	echo "  AR    $@"
-	$(AR) -rc $@ $(OBJS_X509)
+	$(AR) $(ARFLAGS) $@ $(OBJS_X509)
+ifdef APPLE_BUILD
+ifneq ($(APPLE_BUILD),0)
 	echo "  RL    $@"
-	$(AR) -s $@
+	$(RL) $(RLFLAGS) $@
+endif
+endif
 
-libmbedx509.$(SOEXT_X509): $(OBJS_X509) libmbedcrypto.so
+libmbedx509.$(SOEXT_X509): $(OBJS_X509) $(CRYPTO)libmbedcrypto.so
 	echo "  LD    $@"
 	$(CC) -shared -Wl,-soname,$@ -L. -lmbedcrypto $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@ $(OBJS_X509)
 
@@ -126,44 +147,31 @@ libmbedx509.so: libmbedx509.$(SOEXT_X509)
 	echo "  LN    $@ -> $<"
 	ln -sf $< $@
 
-libmbedx509.dylib: $(OBJS_X509)
+libmbedx509.dylib: $(OBJS_X509) $(CRYPTO)libmbedcrypto.dylib
 	echo "  LD    $@"
-	$(CC) -dynamiclib $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@ $(OBJS_X509)
+	$(CC) -dynamiclib -L. -lmbedcrypto  $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@ $(OBJS_X509)
 
-libmbedx509.dll: $(OBJS_X509) libmbedcrypto.dll
+libmbedx509.dll: $(OBJS_X509) $(CRYPTO)libmbedcrypto.dll
 	echo "  LD    $@"
 	$(CC) -shared -Wl,-soname,$@ -Wl,--out-implib,$@.a -o $@ $(OBJS_X509) -lws2_32 -lwinmm -lgdi32 -L. -lmbedcrypto -static-libgcc $(LOCAL_LDFLAGS) $(LDFLAGS)
 
-# crypto
-libmbedcrypto.a: $(OBJS_CRYPTO)
-	echo "  AR    $@"
-	$(AR) -rc $@ $(OBJS_CRYPTO)
-	echo "  RL    $@"
-	$(AR) -s $@
+libmbedcrypto.%:
+	$(MAKE) CRYPTO_INCLUDES:="-I../../include -I../include" -C ../crypto/library $@
 
-libmbedcrypto.$(SOEXT_CRYPTO): $(OBJS_CRYPTO)
-	echo "  LD    $@"
-	$(CC) -shared -Wl,-soname,$@ $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@ $(OBJS_CRYPTO)
+libmbedcrypto.$(DLEXT): $(CRYPTO)libmbedcrypto.$(DLEXT)
 
-libmbedcrypto.so: libmbedcrypto.$(SOEXT_CRYPTO)
-	echo "  LN    $@ -> $<"
-	ln -sf $< $@
-
-libmbedcrypto.dylib: $(OBJS_CRYPTO)
-	echo "  LD    $@"
-	$(CC) -dynamiclib $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@ $(OBJS_CRYPTO)
-
-libmbedcrypto.dll: $(OBJS_CRYPTO)
-	echo "  LD    $@"
-	$(CC) -shared -Wl,-soname,$@ -Wl,--out-implib,$@.a -o $@ $(OBJS_CRYPTO) -lws2_32 -lwinmm -lgdi32 -static-libgcc $(LOCAL_LDFLAGS) $(LDFLAGS)
+$(CRYPTO)libmbedcrypto.$(DLEXT): | libmbedcrypto.a
+	$(MAKE) CRYPTO_INCLUDES:="-I../../include -I../include" -C ../crypto/library libmbedcrypto.$(DLEXT)
 
 .c.o:
 	echo "  CC    $<"
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -c $<
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -o $@ -c $<
 
 clean:
 ifndef WINDOWS
-	rm -f *.o libmbed*
+	rm -f *.o libmbed* $(OBJS_CRYPTO)
 else
-	del /Q /F *.o libmbed*
+	if exist *.o del /Q /F *.o
+	if exist libmbed* del /Q /F libmbed*
+	if exist $(OBJS_CRYPTO) del /Q /F $(OBJS_CRYPTO)
 endif

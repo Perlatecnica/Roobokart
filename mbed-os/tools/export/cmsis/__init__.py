@@ -2,13 +2,13 @@ import os
 from os.path import sep, join, exists
 from itertools import groupby
 from xml.etree.ElementTree import Element, tostring
-import ntpath
 import re
 import json
 
 from tools.arm_pack_manager import Cache
 from tools.targets import TARGET_MAP
 from tools.export.exporters import Exporter, TargetNotSupportedException
+from tools.utils import split_path
 
 class fileCMSIS():
     """CMSIS file class.
@@ -31,20 +31,41 @@ class DeviceCMSIS():
 
     Encapsulates target information retrieved by arm-pack-manager"""
 
+    # TODO: This class uses the TARGET_MAP. Usage of the target map may
+    # not work in the online compiler or may work but give the incorrect
+    # information.
     CACHE = Cache(True, False)
     def __init__(self, target):
         target_info = self.check_supported(target)
         if not target_info:
             raise TargetNotSupportedException("Target not supported in CMSIS pack")
-        self.url = target_info['pdsc_file']
-        self.pack_url, self.pack_id = ntpath.split(self.url)
-        self.dname = target_info["_cpu_name"]
+        self.pack_url = target_info['from_pack']['url']
+        self.pack_id = "{}.{}.{}".format(
+            target_info['from_pack']['vendor'],
+            target_info['from_pack']['pack'],
+            target_info['from_pack']['version']
+        )
+        self.dname = target_info["name"]
         self.core = target_info["_core"]
-        self.dfpu = target_info['processor']['fpu']
-        self.debug, self.dvendor = self.vendor_debug(target_info['vendor'])
-        self.dendian = target_info['processor'].get('endianness','Little-endian')
+        self.dfpu = None
+        try:
+            self.dfpu = target_info['processor']['Symmetric']['fpu']
+        except KeyError:
+            # TODO: refactor this into a "base_core_for" function
+            cmsis_core = self.core.replace("F", "").replace("-", "").replace("E", "")
+            cmsis_core = cmsis_core.replace("NS", "")
+            for core_name, proc in target_info['processor']['Asymmetric'].items():
+                if proc['core'] == cmsis_core:
+                    self.dfpu = proc['fpu']
+                    self.dname = '{}:{}'.format(self.dname, core_name)
+                    break
+        self.debug, self.dvendor = self.vendor_debug(
+            target_info.get('vendor') or target_info['from_pack']['vendor']
+        )
+        self.dendian = target_info['processor'].get(
+            'endianness', 'Little-endian'
+        )
         self.debug_svd = target_info.get('debug', '')
-        self.compile_header = target_info['compile']['header']
         self.target_info = target_info
 
     @staticmethod
@@ -97,6 +118,7 @@ class DeviceCMSIS():
         cpu = cpu.replace("Cortex-","ARMC")
         cpu = cpu.replace("+","P")
         cpu = cpu.replace("F","_FP")
+        cpu = cpu.replace("-NS", "")
         return cpu
 
 
@@ -142,7 +164,7 @@ class CMSIS(Exporter):
     def generate(self):
         srcs = self.resources.headers + self.resources.s_sources + \
                self.resources.c_sources + self.resources.cpp_sources + \
-               self.resources.objects + self.resources.libraries + \
+               self.resources.objects + self.libraries + \
                [self.resources.linker_script]
         srcs = [fileCMSIS(src, src) for src in srcs if src]
         ctx = {
@@ -152,3 +174,8 @@ class CMSIS(Exporter):
             'date': ''
         }
         self.gen_file('cmsis/cpdsc.tmpl', ctx, 'project.cpdsc')
+
+
+    @staticmethod
+    def clean(_):
+        os.remove('project.cpdsc')

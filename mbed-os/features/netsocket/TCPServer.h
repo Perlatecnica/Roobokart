@@ -1,5 +1,4 @@
-
-/* TCPServer
+/*
  * Copyright (c) 2015 ARM Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,25 +14,29 @@
  * limitations under the License.
  */
 
+/** @file TCPServer.h Deprecated TCPServer class */
+/** \addtogroup netsocket
+ * @{*/
+
 #ifndef TCPSERVER_H
 #define TCPSERVER_H
 
-#include "netsocket/Socket.h"
+#include "netsocket/InternetSocket.h"
 #include "netsocket/TCPSocket.h"
 #include "netsocket/NetworkStack.h"
 #include "netsocket/NetworkInterface.h"
-#include "rtos/Semaphore.h"
 
 
 /** TCP socket server
- *  @addtogroup netsocket
  */
-class TCPServer : public Socket {
+class TCPServer : public TCPSocket {
 public:
     /** Create an uninitialized socket
      *
      *  Must call open to initialize the socket on a network stack.
      */
+    MBED_DEPRECATED_SINCE("mbed-os-5.10",
+                          "TCPServer is deprecated, use TCPSocket")
     TCPServer();
 
     /** Create a socket on a network interface
@@ -44,8 +47,9 @@ public:
      *  @param stack    Network stack as target for socket
      */
     template <typename S>
+    MBED_DEPRECATED_SINCE("mbed-os-5.10",
+                          "TCPServer is deprecated, use TCPSocket")
     TCPServer(S *stack)
-        : _pending(0), _accept_sem(0)
     {
         open(stack);
     }
@@ -56,17 +60,9 @@ public:
      */
     virtual ~TCPServer();
 
-    /** Listen for connections on a TCP socket
-     *
-     *  Marks the socket as a passive socket that can be used to accept
-     *  incoming connections.
-     *
-     *  @param backlog  Number of pending connections that can be queued
-     *                  simultaneously, defaults to 1
-     *  @return         0 on success, negative error code on failure
-     */
-    nsapi_error_t listen(int backlog = 1);
-    
+    // Allow legacy TCPServer::accept() to override inherited Socket::accept()
+    using TCPSocket::accept;
+
     /** Accepts a connection on a TCP socket
      *
      *  The server socket must be bound and set to listen for connections.
@@ -81,15 +77,11 @@ public:
      *  @param address    Destination for the remote address or NULL
      *  @return           0 on success, negative error code on failure
      */
+    MBED_DEPRECATED_SINCE("mbed-os-5.10",
+                          "TCPServer::accept() is deprecated, use Socket *Socket::accept() instead")
     nsapi_error_t accept(TCPSocket *connection, SocketAddress *address = NULL);
-
-protected:
-    virtual nsapi_protocol_t get_proto();
-    virtual void event();
-
-    volatile unsigned _pending;
-    rtos::Semaphore _accept_sem;
 };
 
-
 #endif
+
+/** @} */

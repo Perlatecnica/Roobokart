@@ -26,8 +26,9 @@ using namespace utest::v1;
 void wifi_connect_nocredentials(void)
 {
     WiFiInterface *wifi = get_interface();
-    nsapi_error_t error;
-    error = wifi->connect();
-    wifi->disconnect();
-    TEST_ASSERT(error == NSAPI_ERROR_PARAMETER);
+    nsapi_error_t error_connect, error_disconnect;
+    error_connect = wifi->connect();
+    error_disconnect = wifi->disconnect();
+    TEST_ASSERT(error_connect == NSAPI_ERROR_NO_SSID || error_connect == NSAPI_ERROR_PARAMETER);
+    TEST_ASSERT_EQUAL(NSAPI_ERROR_NO_CONNECTION, error_disconnect);
 }

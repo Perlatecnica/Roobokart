@@ -1,8 +1,6 @@
-;******************** (C) COPYRIGHT 2015 STMicroelectronics ********************
+;******************** (C) COPYRIGHT 2017 STMicroelectronics ********************
 ;* File Name          : startup_stm32f469xx.s
 ;* Author             : MCD Application Team
-;* Version            : V2.4.1
-;* Date               : 09-October-2015
 ;* Description        : STM32F469x devices vector table for MDK-ARM toolchain. 
 ;*                      This module performs:
 ;*                      - Set the initial SP
@@ -39,35 +37,6 @@
 ; 
 ;*******************************************************************************
 
-; Amount of memory (in bytes) allocated for Stack
-; Tailor this value to your application needs
-; <h> Stack Configuration
-;   <o> Stack Size (in Bytes) <0x0-0xFFFFFFFF:8>
-; </h>
-
-Stack_Size      EQU     0x00000400
-
-                AREA    STACK, NOINIT, READWRITE, ALIGN=3
-                EXPORT  __initial_sp
-                
-Stack_Mem       SPACE   Stack_Size
-__initial_sp    EQU     0x20050000 ; Top of RAM
-
-
-; <h> Heap Configuration
-;   <o>  Heap Size (in Bytes) <0x0-0xFFFFFFFF:8>
-; </h>
-
-Heap_Size       EQU     0x00000400
-
-                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
-                EXPORT  __heap_base
-                EXPORT  __heap_limit
-                
-__heap_base
-Heap_Mem        SPACE   Heap_Size
-__heap_limit    EQU (__initial_sp - Stack_Size)
-
                 PRESERVE8
                 THUMB
 
@@ -77,8 +46,9 @@ __heap_limit    EQU (__initial_sp - Stack_Size)
                 EXPORT  __Vectors
                 EXPORT  __Vectors_End
                 EXPORT  __Vectors_Size
+                IMPORT  |Image$$ARM_LIB_STACK$$ZI$$Limit|
 
-__Vectors       DCD     __initial_sp               ; Top of Stack
+__Vectors       DCD     |Image$$ARM_LIB_STACK$$ZI$$Limit| ; Top of Stack
                 DCD     Reset_Handler              ; Reset Handler
                 DCD     NMI_Handler                ; NMI Handler
                 DCD     HardFault_Handler          ; Hard Fault Handler

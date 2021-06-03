@@ -19,6 +19,8 @@
 
 #include "ble/BLE.h"
 
+#if BLE_FEATURE_GATT_SERVER
+
 /**
 * @class EnvironmentalService
 * @brief BLE Environmental Service. This service provides temperature, humidity and pressure measurement.
@@ -35,10 +37,7 @@ public:
 
     /**
      * @brief   EnvironmentalService constructor.
-     * @param   ble Reference to BLE device.
-     * @param   temperature_en Enable this characteristic.
-     * @param   humidity_en Enable this characteristic.
-     * @param   pressure_en Enable this characteristic.
+     * @param   _ble Reference to BLE device.
      */
     EnvironmentalService(BLE& _ble) :
         ble(_ble),
@@ -102,5 +101,7 @@ private:
     ReadOnlyGattCharacteristic<HumidityType_t>    humidityCharacteristic;
     ReadOnlyGattCharacteristic<PressureType_t>    pressureCharacteristic;
 };
+
+#endif // BLE_FEATURE_GATT_SERVER
 
 #endif /* #ifndef __BLE_ENVIRONMENTAL_SERVICE_H__*/

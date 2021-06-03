@@ -1,8 +1,5 @@
-
-/** \addtogroup events */
-/** @{*/
-/* events
- * Copyright (c) 2017 ARM Limited
+/*
+ * Copyright (c) 2016-2019 ARM Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +19,8 @@
 #include "events/EventQueue.h"
 
 namespace mbed {
+/** \addtogroup events-public-api */
+/** @{*/
 
 /**
  * Return a pointer to an EventQueue, on which normal tasks can be queued.
@@ -41,9 +40,14 @@ namespace mbed {
  * If an RTOS is not present or the configuration option
  * `events.shared-dispatch-from-application` is set to true, then this
  * does not create a dedicated dispatch thread - instead the application is
- * expected to run the EventQueue's dispatch, eg from main. This is necessary
- * for the event loop to work without an RTOS, or an RTOS system can can save
- * memory by reusing the main stack.
+ * expected to run the EventQueue's dispatch, for example from main. This is
+ * necessary for the event loop to work without an RTOS, or an RTOS system can
+ * save memory by reusing the main stack.
+ *
+ * @note
+ * mbed_event_queue is not itself IRQ safe. To use the mbed_event_queue in
+ * interrupt context, you must first call `mbed_event_queue()` in threaded
+ * context and store the pointer for later use.
  *
  * @return pointer to event queue
  */
@@ -67,6 +71,12 @@ events::EventQueue *mbed_event_queue();
  * or less, but could occasionally be significantly higher if many events are
  * queued.
  *
+ * @note
+ * mbed_highprio_event_queue is not itself IRQ safe. To use the
+ * mbed_highprio_event_queue in interrupt context, you must first call
+ * `mbed_highprio_event_queue()` in threaded context and store the pointer for
+ * later use.
+ *
  * @return pointer to high-priority event queue
  */
 
@@ -74,8 +84,8 @@ events::EventQueue *mbed_highprio_event_queue();
 
 #endif // MBED_CONF_RTOS_PRESENT
 
-};
+/** @}*/
+
+}
 
 #endif
-
-/** @}*/

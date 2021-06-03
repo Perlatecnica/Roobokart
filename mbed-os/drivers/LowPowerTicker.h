@@ -1,5 +1,6 @@
 /* mbed Microcontroller Library
  * Copyright (c) 2015 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,27 +21,38 @@
 #include "drivers/Ticker.h"
 #include "platform/NonCopyable.h"
 
-#if defined (DEVICE_LOWPOWERTIMER) || defined(DOXYGEN_ONLY)
+#if defined (DEVICE_LPTICKER) || defined(DOXYGEN_ONLY)
 
 #include "hal/lp_ticker_api.h"
 
 namespace mbed {
-/** \addtogroup drivers */
+/** \defgroup drivers-public-api-ticker Ticker
+ * \ingroup drivers-public-api
+ */
+
+/**
+ * \defgroup drivers_LowPowerTicker LowPowerTicker class
+ * \ingroup drivers-public-api-ticker
+ * @{
+ */
 
 /** Low Power Ticker
  *
  * @note Synchronization level: Interrupt safe
- * @ingroup drivers
  */
 class LowPowerTicker : public Ticker, private NonCopyable<LowPowerTicker> {
 
 public:
-    LowPowerTicker() : Ticker(get_lp_ticker_data()) {
+    LowPowerTicker() : Ticker(get_lp_ticker_data())
+    {
     }
 
-    virtual ~LowPowerTicker() {
+    virtual ~LowPowerTicker()
+    {
     }
 };
+
+/** @}*/
 
 } // namespace mbed
 

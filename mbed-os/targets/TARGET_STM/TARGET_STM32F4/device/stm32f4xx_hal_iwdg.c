@@ -2,8 +2,6 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_iwdg.c
   * @author  MCD Application Team
-  * @version V1.7.1
-  * @date    14-April-2017
   * @brief   IWDG HAL module driver.
   *          This file provides firmware functions to manage the following
   *          functionalities of the Independent Watchdog (IWDG) peripheral:
@@ -119,10 +117,8 @@
 /** @defgroup IWDG_Private_Defines IWDG Private Defines
   * @{
   */
-/* Status register need 5 RC LSI divided by prescaler clock to be updated. With 
-   higher prescaler (256), and according to HSI variation, we need to wait at
-   least 6 cycles so 48 ms. */
-#define HAL_IWDG_DEFAULT_TIMEOUT            48U
+/* MBED */
+#define HAL_IWDG_DEFAULT_TIMEOUT            96u
 /**
   * @}
   */

@@ -18,17 +18,22 @@
 #include "unity.h"
 #include "utest.h"
 
+#if !defined(MBED_CONF_RTOS_PRESENT)
+#error [NOT_SUPPORTED] MemoryPool test cases require a RTOS to run.
+#else
+
 using namespace utest::v1;
 
+#define THREAD_STACK_SIZE 512
+#define TEST_TIMEOUT 50
+
 /* Enum used to select block allocation method. */
-typedef enum
-{
+typedef enum {
     ALLOC, CALLOC
 } AllocType;
 
 /* Structure for complex block type. */
-typedef struct
-{
+typedef struct {
     int a;
     char b;
     int c;
@@ -75,7 +80,7 @@ template<typename T, const uint32_t numOfEntries>
 void test_mem_pool_alloc_success(AllocType atype)
 {
     MemoryPool<T, numOfEntries> mem_pool;
-    T * p_blocks[numOfEntries];
+    T *p_blocks[numOfEntries];
     uint32_t i;
 
     /* Test alloc()/calloc() methods - try to allocate max number of
@@ -121,7 +126,7 @@ template<typename T, const uint32_t numOfEntries>
 void test_mem_pool_alloc_success_complex(AllocType atype)
 {
     MemoryPool<T, numOfEntries> mem_pool;
-    T * p_blocks[numOfEntries];
+    T *p_blocks[numOfEntries];
     uint32_t i;
 
     /* Test alloc()/calloc() methods - try to allocate max number of
@@ -164,8 +169,8 @@ template<typename T, const uint32_t numOfEntries>
 void test_mem_pool_alloc_fail(AllocType atype)
 {
     MemoryPool<T, numOfEntries> mem_pool;
-    T * p_blocks[numOfEntries];
-    T * p_extra_block;
+    T *p_blocks[numOfEntries];
+    T *p_extra_block;
     uint32_t i;
 
     /* Allocate all available blocks. */
@@ -203,7 +208,7 @@ template<typename T, const uint32_t numOfEntries>
 void test_mem_pool_free_success(AllocType atype)
 {
     MemoryPool<T, numOfEntries> mem_pool;
-    T * p_blocks[numOfEntries];
+    T *p_blocks[numOfEntries];
     uint32_t i;
     osStatus status;
 
@@ -243,7 +248,7 @@ template<typename T, const uint32_t numOfEntries>
 void test_mem_pool_free_realloc_last(AllocType atype)
 {
     MemoryPool<T, numOfEntries> mem_pool;
-    T * p_blocks[numOfEntries];
+    T *p_blocks[numOfEntries];
     uint32_t i;
     osStatus status;
 
@@ -299,7 +304,7 @@ template<typename T, const uint32_t numOfEntries>
 void test_mem_pool_free_realloc_last_complex(AllocType atype)
 {
     MemoryPool<T, numOfEntries> mem_pool;
-    T * p_blocks[numOfEntries];
+    T *p_blocks[numOfEntries];
     uint32_t i;
     osStatus status;
 
@@ -355,7 +360,7 @@ template<typename T, const uint32_t numOfEntries>
 void test_mem_pool_free_realloc_first(AllocType atype)
 {
     MemoryPool<T, numOfEntries> mem_pool;
-    T * p_blocks[numOfEntries];
+    T *p_blocks[numOfEntries];
     uint32_t i;
     osStatus status;
 
@@ -411,7 +416,7 @@ template<typename T, const uint32_t numOfEntries>
 void test_mem_pool_free_realloc_first_complex(AllocType atype)
 {
     MemoryPool<T, numOfEntries> mem_pool;
-    T * p_blocks[numOfEntries];
+    T *p_blocks[numOfEntries];
     uint32_t i;
     osStatus status;
 
@@ -452,36 +457,78 @@ void test_mem_pool_free_realloc_first_complex(AllocType atype)
     }
 }
 
-/* Robustness checks for free() function.
+/* Test alloc timeout
  *
- * Given block from the MemoryPool has been successfully deallocated.
- * When free operation is executed on this block again.
- * Then operation fails with osErrorResource status.
- *
- * */
-void test_mem_pool_free_on_freed_block()
+ * Given a pool with one slot for int data
+ * When a thread tries to allocate two blocks with @ TEST_TIMEOUT timeout
+ * Then first operation succeeds immediately and second fails at the correct time.
+ */
+void test_mem_pool_timeout()
 {
     MemoryPool<int, 1> mem_pool;
-    int * p_block;
-    osStatus status;
 
-    /* Allocate memory block. */
-    p_block = mem_pool.alloc();
+    Timer timer;
+    timer.start();
 
-    /* Show that memory pool block has been allocated. */
-    TEST_ASSERT_NOT_NULL(p_block);
+    int *item = mem_pool.alloc_for(TEST_TIMEOUT);
+    TEST_ASSERT_NOT_NULL(item);
+    TEST_ASSERT_UINT32_WITHIN(TEST_TIMEOUT * 100, 0, timer.read_us());
 
-    /* Free memory block. */
-    status = mem_pool.free(p_block);
+    item = mem_pool.alloc_for(TEST_TIMEOUT);
+    TEST_ASSERT_NULL(item);
+    TEST_ASSERT_UINT32_WITHIN(TEST_TIMEOUT * 100, TEST_TIMEOUT * 1000, timer.read_us());
 
-    /* Check operation status. */
+    uint64_t end_time = Kernel::get_ms_count() + TEST_TIMEOUT;
+    item = mem_pool.alloc_until(end_time);
+    TEST_ASSERT_NULL(item);
+    TEST_ASSERT_UINT64_WITHIN(TEST_TIMEOUT * 100, end_time, Kernel::get_ms_count());
+}
+
+namespace {
+struct free_capture {
+    MemoryPool<int, 1> *pool;
+    int *item;
+};
+}
+
+static void free_int_item(free_capture *to_free)
+{
+    ThisThread::sleep_for(TEST_TIMEOUT);
+
+    osStatus status = to_free->pool->free(to_free->item);
     TEST_ASSERT_EQUAL(osOK, status);
+}
 
-    /* Free memory block again. */
-    status = mem_pool.free(p_block);
+/** Test alloc wait forever
+ *
+ * Given two threads A & B and a pool with one slot for int data
+ * When thread A allocs a block from the pool and tries to alloc a second one with @a osWaitForever timeout
+ * Then thread waits for a block to become free in the pool
+ * When thread B frees the first block from the pool
+ * Then thread A successfully allocs a block from the pool
+ */
+void test_mem_pool_waitforever()
+{
+    Thread t(osPriorityNormal, THREAD_STACK_SIZE);
+    MemoryPool<int, 1> pool;
 
-    /* Check operation status. */
-    TEST_ASSERT_EQUAL(osErrorResource, status);
+    Timer timer;
+    timer.start();
+
+    int *item = pool.alloc_for(osWaitForever);
+    TEST_ASSERT_NOT_NULL(item);
+    TEST_ASSERT_UINT32_WITHIN(TEST_TIMEOUT * 100, 0, timer.read_us());
+
+    struct free_capture to_free;
+    to_free.pool = &pool;
+    to_free.item = item;
+    t.start(callback(free_int_item, &to_free));
+
+    item = pool.alloc_for(osWaitForever);
+    TEST_ASSERT_EQUAL(item, to_free.item);
+    TEST_ASSERT_UINT32_WITHIN(TEST_TIMEOUT * 100, TEST_TIMEOUT * 1000, timer.read_us());
+
+    t.join();
 }
 
 /* Robustness checks for free() function.
@@ -518,7 +565,7 @@ void free_block_invalid_parameter()
     osStatus status;
 
     /* Try to free block passing invalid parameter (variable address). */
-    status = mem_pool.free(reinterpret_cast<int*>(&status));
+    status = mem_pool.free(reinterpret_cast<int *>(&status));
 
     /* Check operation status. */
     TEST_ASSERT_EQUAL(osErrorParameter, status);
@@ -603,7 +650,9 @@ Case cases[] = {
 
     Case("Test: fail (out of free blocks).", test_mem_pool_alloc_fail_wrapper<int, 3>),
 
-    Case("Test: free() - robust (free block twice).", test_mem_pool_free_on_freed_block),
+    Case("Test: timeout", test_mem_pool_timeout),
+    Case("Test: wait forever", test_mem_pool_waitforever),
+
     Case("Test: free() - robust (free called with invalid param - NULL).", free_block_invalid_parameter_null),
     Case("Test: free() - robust (free called with invalid param).", free_block_invalid_parameter)
 };
@@ -621,3 +670,4 @@ int main()
     Harness::run(specification);
 }
 
+#endif // !defined(MBED_CONF_RTOS_PRESENT)

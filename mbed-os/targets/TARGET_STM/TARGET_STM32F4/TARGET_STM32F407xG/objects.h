@@ -49,9 +49,13 @@ struct gpio_irq_s {
 struct port_s {
     PortName port;
     uint32_t mask;
-    PinDirection direction;  
+    PinDirection direction;
     __IO uint32_t *reg_in;
     __IO uint32_t *reg_out;
+};
+
+struct trng_s {
+    RNG_HandleTypeDef handle;
 };
 
 #include "common_objects.h"

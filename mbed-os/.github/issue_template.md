@@ -1,48 +1,39 @@
-Note: This is just a template, so feel free to use/remove the unnecessary things
+<!--
 
-### Description
-- Type: Bug | Enhancement | Question
-- Related issue: `#abc`
-- Priority: Blocker | Major | Minor
+   ************************************** WARNING **************************************
 
----------------------------------------------------------------
-## Bug
+   The ciarcom bot parses this header automatically. Any deviation from the 
+   template may cause the bot to automatically correct this header or may result in a 
+   warning message, requesting updates.
 
-**Target**
-K64F|??
+   Please ensure all sections of the template below are filled in and no changes 
+   are made to the template format. Only bugs should be raised here as issues. 
+   Questions or enhancements should instead be raised on our forums:
+   https://forums.mbed.com/ .
 
-**Toolchain:**
-GCC_ARM|ARM|IAR
+   *************************************************************************************
 
-**Toolchain version:**
+-->
 
-**mbed-cli version:** 
-(`mbed --version`)
+### Description of defect
 
-**mbed-os sha:**
-(`git log -n1 --oneline`)
+<!--
+    Add detailed description of what you are reporting.
+    Good example: https://os.mbed.com/docs/mbed-os/latest/contributing/workflow.html
+-->
 
-**DAPLink version:**
 
-**Expected behavior**
+#### Target(s) affected by this defect ?
 
-**Actual behavior**
 
-**Steps to reproduce**
+#### Toolchain(s) (name and version) displaying this defect ?
 
-----------------------------------------------------------------
-## Enhancement
 
-**Reason to enhance or problem with existing solution**
+#### What version of Mbed-os are you using (tag or sha) ?
 
-**Suggested enhancement**
+#### What version(s) of tools are you using. List all that apply (E.g. mbed-cli)
 
-**Pros**
 
-**Cons**
+#### How is this defect reproduced ? 
 
------------------------------------------------------------------
 
-## Question
-
-**How to?**

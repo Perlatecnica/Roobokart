@@ -13,19 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#if defined(MBED_RTOS_SINGLE_THREAD) || !defined(MBED_CONF_RTOS_PRESENT)
+#error [NOT_SUPPORTED] mail test cases require RTOS with multithread to run
+#else
+
+#if !DEVICE_USTICKER
+#error [NOT_SUPPORTED] UsTicker need to be enabled for this test.
+#else
+
 #include "mbed.h"
 #include "greentea-client/test_env.h"
 #include "unity.h"
 #include "utest.h"
 #include "rtos.h"
 
-#if defined(MBED_RTOS_SINGLE_THREAD)
-  #error [NOT_SUPPORTED] test not supported
-#endif
-
 using namespace utest::v1;
 
+#if defined(__CORTEX_M23) || defined(__CORTEX_M33)
+#define THREAD_STACK_SIZE   512
+#elif defined(TARGET_ARM_FM)
+#define THREAD_STACK_SIZE   512
+#elif defined(TARGET_CY8CKIT_062_WIFI_BT_PSA)
+#define THREAD_STACK_SIZE   512
+#else
 #define THREAD_STACK_SIZE   320 /* larger stack cause out of heap memory on some 16kB RAM boards in multi thread test*/
+#endif
 #define QUEUE_SIZE          16
 #define THREAD_1_ID         1
 #define THREAD_2_ID         2
@@ -52,7 +64,7 @@ void send_thread(Mail<mail_t, QUEUE_SIZE> *m)
         mail->thread_id = thread_id;
         mail->data = data++;
         m->put(mail);
-        Thread::wait(wait_ms);
+        ThisThread::sleep_for(wait_ms);
     }
 }
 
@@ -62,11 +74,11 @@ void receive_thread(Mail<mail_t, queue_size> *m)
     int result_counter = 0;
     uint32_t data = thread_id * DATA_BASE;
 
-    Thread::wait(wait_ms);
+    ThisThread::sleep_for(wait_ms);
     for (uint32_t i = 0; i < queue_size; i++) {
         osEvent evt = m->get();
         if (evt.status == osEventMail) {
-            mail_t *mail = (mail_t*)evt.value.p;
+            mail_t *mail = (mail_t *)evt.value.p;
             const uint8_t id = mail->thread_id;
 
             // verify thread id
@@ -98,13 +110,13 @@ void test_single_thread_order(void)
     thread.start(callback(send_thread<THREAD_1_ID, QUEUE_PUT_DELAY_1, QUEUE_SIZE>, &mail_box));
 
     // wait for some mail to be collected
-    Thread::wait(10);
+    ThisThread::sleep_for(10);
 
     for (uint32_t i = 0; i < QUEUE_SIZE; i++) {
         // mail receive (main thread)
         osEvent evt = mail_box.get();
         if (evt.status == osEventMail) {
-            mail_t *mail = (mail_t*)evt.value.p;
+            mail_t *mail = (mail_t *)evt.value.p;
             const uint8_t id = mail->thread_id;
 
             // verify thread id
@@ -140,13 +152,13 @@ void test_multi_thread_order(void)
     thread3.start(callback(send_thread<THREAD_3_ID, QUEUE_PUT_DELAY_3, 4>, &mail_box));
 
     // wait for some mail to be collected
-    Thread::wait(10);
+    ThisThread::sleep_for(10);
 
     for (uint32_t i = 0; i < QUEUE_SIZE; i++) {
         // mail receive (main thread)
         osEvent evt = mail_box.get();
         if (evt.status == osEventMail) {
-            mail_t *mail = (mail_t*)evt.value.p;
+            mail_t *mail = (mail_t *)evt.value.p;
             const uint8_t id = mail->thread_id;
 
             // verify thread id
@@ -201,7 +213,7 @@ void test_multi_thread_multi_mail_order(void)
         mail->data = data[id]++;
         mail_box[id].put(mail);
 
-        Thread::wait(i * 10);
+        ThisThread::sleep_for(i * 10);
     }
 
     thread1.join();
@@ -255,28 +267,6 @@ void test_free_null()
     mail = NULL;
     status = mail_box.free(mail);
     TEST_ASSERT_EQUAL(osErrorParameter, status);
-}
-
-/** Test same message memory deallocation twice
-
-    Given an empty mailbox
-    Then allocate message memory
-    When try to free it second time
-    Then it return appropriate error code
- */
-void test_free_twice()
-{
-    osStatus status;
-    Mail<uint32_t, 4> mail_box;
-
-    uint32_t *mail = mail_box.alloc();
-    TEST_ASSERT_NOT_EQUAL(NULL, mail);
-
-    status = mail_box.free(mail);
-    TEST_ASSERT_EQUAL(osOK, status);
-
-    status = mail_box.free(mail);
-    TEST_ASSERT_EQUAL(osErrorResource, status);
 }
 
 /** Test get from empty mailbox with timeout set
@@ -343,13 +333,13 @@ void test_order(void)
     evt = mail_box.get();
     TEST_ASSERT_EQUAL(evt.status, osEventMail);
 
-    mail1 = (int32_t*)evt.value.p;
+    mail1 = (int32_t *)evt.value.p;
     TEST_ASSERT_EQUAL(TEST_VAL1, *mail1);
 
     evt = mail_box.get();
     TEST_ASSERT_EQUAL(evt.status, osEventMail);
 
-    mail2 = (int32_t*)evt.value.p;
+    mail2 = (int32_t *)evt.value.p;
     TEST_ASSERT_EQUAL(TEST_VAL2, *mail2);
 
 
@@ -431,7 +421,7 @@ void test_data_type(void)
     osEvent evt = mail_box.get();
     TEST_ASSERT_EQUAL(evt.status, osEventMail);
 
-    mail = (T*)evt.value.p;
+    mail = (T *)evt.value.p;
     TEST_ASSERT_EQUAL(TEST_VAL, *mail);
 
 
@@ -454,6 +444,43 @@ void test_calloc()
     TEST_ASSERT_EQUAL(0, *mail);
 }
 
+/** Test mail empty
+
+    Given a mail of uint32_t data
+    before data is inserted the mail should be empty
+    after data is inserted the mail shouldn't be empty
+ */
+void test_mail_empty()
+{
+    Mail<mail_t, 1> m;
+
+    mail_t *mail = m.alloc();
+
+    TEST_ASSERT_EQUAL(true,  m.empty());
+
+    m.put(mail);
+
+    TEST_ASSERT_EQUAL(false, m.empty());
+}
+
+/** Test mail empty
+
+    Given a mail of uint32_t data with size of 1
+    before data is inserted the mail shouldn't be full
+    after data is inserted the mail should be full
+ */
+void test_mail_full()
+{
+    Mail<mail_t, 1> m;
+
+    mail_t *mail = m.alloc();
+
+    TEST_ASSERT_EQUAL(false,  m.full());
+
+    m.put(mail);
+
+    TEST_ASSERT_EQUAL(true, m.full());
+}
 
 utest::v1::status_t test_setup(const size_t number_of_cases)
 {
@@ -470,12 +497,13 @@ Case cases[] = {
     Case("Test message send order", test_order),
     Case("Test get with timeout on empty mailbox", test_get_empty_timeout),
     Case("Test get without timeout on empty mailbox", test_get_empty_no_timeout),
-    Case("Test message free twice", test_free_twice),
     Case("Test null message free", test_free_null),
     Case("Test invalid message free", test_free_wrong),
     Case("Test message send/receive single thread and order", test_single_thread_order),
     Case("Test message send/receive multi-thread and per thread order", test_multi_thread_order),
-    Case("Test message send/receive multi-thread, multi-Mail and per thread order", test_multi_thread_multi_mail_order)
+    Case("Test message send/receive multi-thread, multi-Mail and per thread order", test_multi_thread_multi_mail_order),
+    Case("Test mail empty", test_mail_empty),
+    Case("Test mail full", test_mail_full)
 };
 
 Specification specification(test_setup, cases);
@@ -484,3 +512,6 @@ int main()
 {
     return !Harness::run(specification);
 }
+
+#endif // !DEVICE_USTICKER
+#endif // defined(MBED_RTOS_SINGLE_THREAD) || !defined(MBED_CONF_RTOS_PRESENT)

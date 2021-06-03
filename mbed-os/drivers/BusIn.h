@@ -1,5 +1,6 @@
 /* mbed Microcontroller Library
  * Copyright (c) 2006-2013 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,12 +23,15 @@
 #include "platform/NonCopyable.h"
 
 namespace mbed {
-/** \addtogroup drivers */
+/**
+ * \defgroup drivers_BusIn BusIn class
+ * \ingroup drivers-public-api-gpio
+ * @{
+ */
 
 /** A digital input bus, used for reading the state of a collection of pins
  *
  * @note Synchronization level: Thread safe
- * @ingroup drivers
  */
 class BusIn : private NonCopyable<BusIn> {
 
@@ -62,12 +66,12 @@ public:
           PinName p8 = NC, PinName p9 = NC, PinName p10 = NC, PinName p11 = NC,
           PinName p12 = NC, PinName p13 = NC, PinName p14 = NC, PinName p15 = NC);
 
-    
+
     /** Create an BusIn, connected to the specified pins
      *
      * @param pins An array of pins to connect to bus bit
      */
-     BusIn(PinName pins[16]);
+    BusIn(PinName pins[16]);
 
     virtual ~BusIn();
 
@@ -90,7 +94,8 @@ public:
      *  @returns
      *    Binary mask of connected pins
      */
-    int mask() {
+    int mask()
+    {
         // No lock needed since _nc_mask is not modified outside the constructor
         return _nc_mask;
     }
@@ -103,10 +108,11 @@ public:
     /** Access to particular bit in random-iterator fashion
      * @param index  Position of bit
      */
-    DigitalIn & operator[] (int index);
+    DigitalIn &operator[](int index);
 
+#if !defined(DOXYGEN_ONLY)
 protected:
-    DigitalIn* _pin[16];
+    DigitalIn *_pin[16];
 
     /* Mask of bus's NC pins
      * If bit[n] is set to 1 - pin is connected
@@ -119,7 +125,10 @@ protected:
 private:
     virtual void lock();
     virtual void unlock();
+#endif
 };
+
+/** @}*/
 
 } // namespace mbed
 

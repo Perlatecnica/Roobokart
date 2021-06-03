@@ -20,8 +20,13 @@
 #warning ble/services/EddystoneService.h is deprecated. Please use the example in 'github.com/ARMmbed/ble-examples/tree/master/BLE_EddystoneService'.
 
 #include "ble/BLE.h"
-#include "mbed.h"
 #include "CircularBuffer.h"
+#include "Timer.h"
+#include "Ticker.h"
+#include "Timeout.h"
+
+#if BLE_FEATURE_GATT_SERVER
+
 static const uint8_t BEACON_EDDYSTONE[] = {0xAA, 0xFE};
 
 //Debug is disabled by default
@@ -76,7 +81,7 @@ public:
     void (*frames[EDDYSTONE_MAX_FRAMETYPE])(uint8_t *, uint32_t);
     static const int URI_DATA_MAX = 18;
     typedef uint8_t  UriData_t[URI_DATA_MAX];
-    CircularBuffer<FrameTypes, EDDYSTONE_MAX_FRAMETYPE> overflow;
+    mbed::CircularBuffer<FrameTypes, EDDYSTONE_MAX_FRAMETYPE> overflow;
 
     // UID Frame Type subfields
     static const int UID_NAMESPACEID_SIZE = 10;
@@ -98,6 +103,7 @@ public:
      *  @param[in] power       TX Power in dB measured at 0 meters from the device. Range of -100 to +20 dB.
      *  @param[in] namespaceID 10B namespace ID
      *  @param[in] instanceID  6B instance ID
+     *  @param[in] uidAdvPeriodIn Advertising period of UID frames.
      *  @param[in] RFU         2B of RFU, initialized to 0x0000 and not broadcast, included for future reference.
      */
     void setUIDFrameData(int8_t           power,
@@ -168,7 +174,7 @@ public:
     /**
      *  Set Eddystone URL Frame information.
      *  @param[in] power          TX Power in dB measured at 0 meters from the device.
-     *  @param[in] url            URL to encode
+     *  @param[in] urlIn            URL to encode
      *  @param[in] urlAdvPeriodIn How long to advertise the URL frame (measured in # of adv periods)
      *  @return false on success, true on failure.
      */
@@ -528,7 +534,7 @@ public:
             DBG("attached tlmCallback every %d seconds", TlmAdvPeriod);
         }
         if (NONE == frameIndex) {
-            error("No Frames were Initialized! Please initialize a frame before starting an eddystone beacon.");
+            MBED_ERROR(MBED_MAKE_ERROR(MBED_MODULE_BLE, MBED_ERROR_CODE_BLE_NO_FRAME_INITIALIZED), "No Frames were Initialized! Please initialize a frame before starting an eddystone beacon.");
         }
         //uidRFU = 0;
 
@@ -542,11 +548,11 @@ private:
     BLEDevice           &ble;
     uint16_t            advPeriodus;
     uint8_t             txPower;
-    Timer               timeSinceBootTimer;
+    mbed::Timer               timeSinceBootTimer;
     volatile uint32_t   lastBootTimerRead;
     volatile bool       advLock;
     volatile FrameTypes frameIndex;
-    Timeout             stopAdv;
+    mbed::Timeout             stopAdv;
 
 
     // URI Frame Variables
@@ -555,7 +561,7 @@ private:
     int8_t              defaultUrlPower;
     bool                urlIsSet;       // flag that enables / disable URI Frames
     float               urlAdvPeriod;   // how long the url frame will be advertised for
-    Ticker              urlTicker;
+    mbed::Ticker              urlTicker;
 
     // UID Frame Variables
     UIDNamespaceID_t    defaultUidNamespaceID;
@@ -564,7 +570,7 @@ private:
     uint16_t            uidRFU;
     bool                uidIsSet;       // flag that enables / disable UID Frames
     float               uidAdvPeriod;   // how long the uid frame will be advertised for
-    Ticker              uidTicker;
+    mbed::Ticker              uidTicker;
 
     // TLM Frame Variables
     uint8_t             TlmVersion;
@@ -574,7 +580,7 @@ private:
     volatile uint32_t   TlmTimeSinceBoot;
     bool                tlmIsSet;          // flag that enables / disables TLM frames
     float               TlmAdvPeriod;      // number of minutes between adv frames
-    Ticker              tlmTicker;
+    mbed::Ticker              tlmTicker;
 
 public:
     /*
@@ -649,5 +655,7 @@ public:
         }
     }
 };
+
+#endif // BLE_FEATURE_GATT_SERVER
 
 #endif  // SERVICES_EDDYSTONEBEACON_H_

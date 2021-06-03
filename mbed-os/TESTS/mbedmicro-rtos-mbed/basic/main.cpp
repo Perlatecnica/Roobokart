@@ -14,18 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#if defined(MBED_RTOS_SINGLE_THREAD) || !defined(MBED_CONF_RTOS_PRESENT)
+#error [NOT_SUPPORTED] RTOS basic test cases require RTOS with multithread to run
+#else
+
 #include "mbed.h"
 #include "greentea-client/test_env.h"
 #include "utest/utest.h"
 #include "unity/unity.h"
 
-#if defined(MBED_RTOS_SINGLE_THREAD)
-#error [NOT_SUPPORTED] test not supported
-#endif
+#if defined(SKIP_TIME_DRIFT_TESTS) || !DEVICE_USTICKER
+#error [NOT_SUPPORTED] UsTicker need to be enabled for this test.
+#else
 
 using utest::v1::Case;
 
+#if defined(__CORTEX_M23) || defined(__CORTEX_M33)
+#define TEST_STACK_SIZE 512
+#else
 #define TEST_STACK_SIZE 256
+#endif
 #define ONE_MILLI_SEC 1000
 
 volatile uint32_t elapsed_time_ms = 0;
@@ -35,7 +43,7 @@ static const int test_timeout = 40;
 void update_tick_thread(Mutex *mutex)
 {
     while (true) {
-        Thread::wait(1);
+        ThisThread::sleep_for(1);
         mutex->lock();
         ++elapsed_time_ms;
         mutex->unlock();
@@ -43,7 +51,7 @@ void update_tick_thread(Mutex *mutex)
 }
 
 
-/** Tests is to measure the accuracy of Thread::wait() over a period of time
+/** Tests is to measure the accuracy of ThisThread::sleep_for() over a period of time
 
     Given
         a thread updating elapsed_time_ms every milli sec
@@ -92,11 +100,11 @@ void test(void)
     //get the results from host
     greentea_parse_kv(_key, _value, sizeof(_key), sizeof(_value));
 
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("pass", _key,"Host side script reported a fail...");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("pass", _key, "Host side script reported a fail...");
 }
 
 Case cases[] = {
-    Case("Test Thread::wait accuracy", test)
+    Case("Test ThisThread::sleep_for accuracy", test)
 };
 
 utest::v1::status_t greentea_test_setup(const size_t number_of_cases)
@@ -111,3 +119,6 @@ int main()
 {
     utest::v1::Harness::run(specification);
 }
+
+#endif // defined(SKIP_TIME_DRIFT_TESTS) || !DEVICE_USTICKER
+#endif // defined(MBED_RTOS_SINGLE_THREAD) || !defined(MBED_CONF_RTOS_PRESENT)

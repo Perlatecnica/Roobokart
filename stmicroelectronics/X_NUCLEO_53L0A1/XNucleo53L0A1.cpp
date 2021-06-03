@@ -68,13 +68,10 @@ int XNucleo53L0A1::init_board()
 {
     int status, n_dev = 0;
 
-								
-  
-					   
- 
     sensor_centre->VL53L0X_off();
     sensor_left->VL53L0X_off();
     sensor_right->VL53L0X_off();
+
     status = sensor_centre->init_sensor(NEW_SENSOR_CENTRE_ADDRESS);
     if (status) {
 	
@@ -91,22 +88,20 @@ int XNucleo53L0A1::init_board()
     }
     status = sensor_left->init_sensor(NEW_SENSOR_LEFT_ADDRESS);
     if (status) {
-	
         delete sensor_left;
         delete xshutdown_left;
         sensor_left = NULL;
         xshutdown_left = NULL;
         printf("Sensor left not present\n\r");
-	
     } else {
-	
         printf("Sensor left present\n\r");
         n_dev++;
+
     }
 
     status = sensor_right->init_sensor(NEW_SENSOR_RIGHT_ADDRESS);
+
     if (status) {
-	
         delete sensor_right;
         delete xshutdown_right;
         sensor_right = NULL;
@@ -114,7 +109,6 @@ int XNucleo53L0A1::init_board()
         printf("Sensor right not present\n\r");
 	
     } else {
-	
         printf("Sensor right present\n\r");
         n_dev++;
     }

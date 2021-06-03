@@ -1,3 +1,6 @@
+from __future__ import print_function, absolute_import
+from builtins import str
+
 import os
 from os.path import sep, join, exists
 from collections import namedtuple
@@ -38,7 +41,7 @@ class IAR(Exporter):
     @classmethod
     def is_target_supported(cls, target_name):
         target = TARGET_MAP[target_name]
-        return _supported(target, _GUI_OPTIONS.keys())
+        return _supported(target, list(_GUI_OPTIONS))
 
 
     def iar_groups(self, grouped_src):
@@ -83,10 +86,13 @@ class IAR(Exporter):
             "CExtraOptionsCheck": 0,
             "CExtraOptions": "",
             "CMSISDAPJtagSpeedList": 0,
+            "DSPExtension": 0,
+            "TrustZone": 0,
+            "IlinkOverrideProgramEntryLabel": 0,
+            "IlinkProgramEntryLabel": "__iar_program_start",
         }
-
         iar_defaults.update(device_info)
-        IARdevice = namedtuple('IARdevice', iar_defaults.keys())
+        IARdevice = namedtuple('IARdevice', list(iar_defaults))
         return IARdevice(**iar_defaults)
 
     def format_file(self, file):
@@ -106,22 +112,26 @@ class IAR(Exporter):
             raise NotSupportedException("No linker script found.")
         srcs = self.resources.headers + self.resources.s_sources + \
                self.resources.c_sources + self.resources.cpp_sources + \
-               self.resources.objects + self.resources.libraries
+               self.resources.objects + self.libraries
         flags = self.flags
         c_flags = list(set(flags['common_flags']
-                                    + flags['c_flags']
-                                    + flags['cxx_flags']))
+                           + flags['c_flags']
+                           + flags['cxx_flags']))
         # Flags set in template to be set by user in IDE
         template = ["--vla", "--no_static_destruction"]
         # Flag invalid if set in template
         # Optimizations are also set in template
-        invalid_flag = lambda x: x in template or re.match("-O(\d|time|n|hz?)", x)
+        invalid_flag = lambda x: x in template or re.match("-O(\d|time|n|l|hz?)", x)
         flags['c_flags'] = [flag for flag in c_flags if not invalid_flag(flag)]
 
         try:
             debugger = DeviceCMSIS(self.target).debug.replace('-','').upper()
         except TargetNotSupportedException:
             debugger = "CMSISDAP"
+
+        trustZoneMode = 0
+        if self.toolchain.target.core.endswith("-NS"):
+            trustZoneMode = 1
 
         ctx = {
             'name': self.project_name,
@@ -130,13 +140,25 @@ class IAR(Exporter):
             'include_paths': [self.format_file(src) for src in self.resources.inc_dirs],
             'device': self.iar_device(),
             'ewp': sep+self.project_name + ".ewp",
-            'debugger': debugger
+            'debugger': debugger,
+            'trustZoneMode': trustZoneMode,
         }
         ctx.update(flags)
 
         self.gen_file('iar/eww.tmpl', ctx, self.project_name + ".eww")
         self.gen_file('iar/ewd.tmpl', ctx, self.project_name + ".ewd")
         self.gen_file('iar/ewp.tmpl', ctx, self.project_name + ".ewp")
+
+    @staticmethod
+    def clean(project_name):
+        os.remove(project_name + ".ewp")
+        os.remove(project_name + ".ewd")
+        os.remove(project_name + ".eww")
+        # legacy output file location
+        if exists('.build'):
+            shutil.rmtree('.build')
+        if exists('BUILD'):
+            shutil.rmtree('BUILD')
 
     @staticmethod
     def build(project_name, log_name="build_log.txt", cleanup=True):
@@ -170,7 +192,7 @@ class IAR(Exporter):
         else:
             out_string += "FAILURE"
 
-        print out_string
+        print(out_string)
 
         if log_name:
             # Write the output to the log file
@@ -179,19 +201,10 @@ class IAR(Exporter):
 
         # Cleanup the exported and built files
         if cleanup:
-            os.remove(project_name + ".ewp")
-            os.remove(project_name + ".ewd")
-            os.remove(project_name + ".eww")
-            # legacy output file location
-            if exists('.build'):
-                shutil.rmtree('.build')
-            if exists('BUILD'):
-                shutil.rmtree('BUILD')
+            IAR.clean(project_name)
 
         if ret_code !=0:
             # Seems like something went wrong.
             return -1
         else:
             return 0
-
-

@@ -21,7 +21,14 @@
 #include "nsapi_types.h"
 #include "netsocket/SocketAddress.h"
 #include "netsocket/NetworkInterface.h"
+#include "DNS.h"
 
+/** @file NetworkStack.h NetworkStack class */
+/** @addtogroup netsocket
+ * @{ */
+
+// Predeclared classes
+class OnboardNetworkStack;
 
 /** NetworkStack class
  *
@@ -29,19 +36,46 @@
  *  can connect to a network over IP. By implementing the
  *  NetworkStack, a network stack can be used as a target
  *  for instantiating network sockets.
- *  @addtogroup netsocket
  */
-class NetworkStack
-{
+class NetworkStack: public DNS {
 public:
     virtual ~NetworkStack() {};
 
     /** Get the local IP address
      *
-     *  @return         Null-terminated representation of the local IP address
-     *                  or null if not yet connected
+     *  @param          address SocketAddress representation of the local IP address
+     *  @retval         NSAPI_ERROR_OK on success
+     *  @retval         NSAPI_ERROR_UNSUPPORTED if this feature is not supported
+     *  @retval         NSAPI_ERROR_PARAMETER if the provided pointer is invalid
+     *  @retval         NSAPI_ERROR_NO_ADDRESS if the address cannot be obtained from stack
      */
-    virtual const char *get_ip_address() = 0;
+    virtual nsapi_error_t get_ip_address(SocketAddress *address);
+
+    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
+    virtual const char *get_ip_address();
+
+    /** Get the IPv6 link local address
+     *
+     *  @param          address SocketAddress representation of the link local IPv6 address
+     *  @retval         NSAPI_ERROR_OK on success
+     *  @retval         NSAPI_ERROR_UNSUPPORTED if this feature is not supported
+     *  @retval         NSAPI_ERROR_PARAMETER if the provided pointer is invalid
+     */
+    virtual nsapi_error_t get_ipv6_link_local_address(SocketAddress *address);
+
+    /** Get the local IP address on interface name
+     *
+     *  @param          address SocketAddress representation of the link local IPv6 address
+     *  @param          interface_name  Network interface_name
+     *  @retval         NSAPI_ERROR_OK on success
+     *  @retval         NSAPI_ERROR_UNSUPPORTED if this feature is not supported
+     *  @retval         NSAPI_ERROR_PARAMETER if the provided pointer is invalid
+     *  @retval         NSAPI_ERROR_NO_ADDRESS if the address cannot be obtained from stack
+     */
+    virtual nsapi_error_t get_ip_address_if(SocketAddress *address, const char *interface_name);
+
+    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
+    virtual const char *get_ip_address_if(const char *interface_name);
 
     /** Translates a hostname to an IP address with specific version
      *
@@ -52,20 +86,84 @@ public:
      *  will be resolve using a UDP socket on the stack.
      *
      *  @param host     Hostname to resolve
-     *  @param address  Destination for the host SocketAddress
+     *  @param address  Pointer to a SocketAddress to store the result.
      *  @param version  IP version of address to resolve, NSAPI_UNSPEC indicates
      *                  version is chosen by the stack (defaults to NSAPI_UNSPEC)
-     *  @return         0 on success, negative error code on failure
+     *  @param interface_name  Network interface_name
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure
      */
     virtual nsapi_error_t gethostbyname(const char *host,
-            SocketAddress *address, nsapi_version_t version = NSAPI_UNSPEC);
+                                        SocketAddress *address, nsapi_version_t version = NSAPI_UNSPEC, const char *interface_name = NULL);
+
+    /** Hostname translation callback (asynchronous)
+     *
+     *  Callback will be called after DNS resolution completes or a failure occurs.
+     *
+     *  Callback should not take more than 10ms to execute, otherwise it might
+     *  prevent underlying thread processing. A portable user of the callback
+     *  should not make calls to network operations due to stack size limitations.
+     *  The callback should not perform expensive operations such as socket recv/send
+     *  calls or blocking operations.
+     *
+     *  @param status  NSAPI_ERROR_OK on success, negative error code on failure
+     *  @param address On success, destination for the host SocketAddress
+     */
+    typedef mbed::Callback<void (nsapi_error_t result, SocketAddress *address)> hostbyname_cb_t;
+
+    /** Translates a hostname to an IP address (asynchronous)
+     *
+     *  The hostname may be either a domain name or an IP address. If the
+     *  hostname is an IP address, no network transactions will be performed.
+     *
+     *  If no stack-specific DNS resolution is provided, the hostname
+     *  will be resolve using a UDP socket on the stack.
+     *
+     *  Call is non-blocking. Result of the DNS operation is returned by the callback.
+     *  If this function returns failure, callback will not be called. In case result
+     *  is success (IP address was found from DNS cache), callback will be called
+     *  before function returns.
+     *
+     *  @param host     Hostname to resolve
+     *  @param callback Callback that is called for result
+     *  @param version  IP version of address to resolve, NSAPI_UNSPEC indicates
+     *                  version is chosen by the stack (defaults to NSAPI_UNSPEC)
+     *  @param interface_name  Network interface_name
+     *  @return         0 on immediate success,
+     *                  negative error code on immediate failure or
+     *                  a positive unique id that represents the hostname translation operation
+     *                  and can be passed to cancel
+     */
+    virtual nsapi_value_or_error_t gethostbyname_async(const char *host, hostbyname_cb_t callback, nsapi_version_t version = NSAPI_UNSPEC,
+                                                       const char *interface_name = NULL);
+
+    /** Cancels asynchronous hostname translation
+     *
+     *  When translation is cancelled, callback will not be called.
+     *
+     *  @param id       Unique id of the hostname translation operation
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure
+     */
+    virtual nsapi_error_t gethostbyname_async_cancel(int id);
 
     /** Add a domain name server to list of servers to query
      *
      *  @param address  Destination for the host address
-     *  @return         0 on success, negative error code on failure
+     *  @param interface_name  Network interface name
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure
      */
-    virtual nsapi_error_t add_dns_server(const SocketAddress &address);
+    virtual nsapi_error_t add_dns_server(const SocketAddress &address, const char *interface_name = NULL);
+
+    /** Get a domain name server from a list of servers to query
+     *
+     *  Returns a DNS server address for a index. If returns error no more
+     *  DNS servers to read.
+     *
+     *  @param index    Index of the DNS server, starts from zero
+     *  @param address  Destination for the host address
+     *  @param interface_name  Network interface name
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure
+     */
+    virtual nsapi_error_t get_dns_server(int index, SocketAddress *address, const char *interface_name = NULL);
 
     /*  Set stack options
      *
@@ -80,7 +178,7 @@ public:
      *  @param optname  Level-specific option name
      *  @param optval   Option value
      *  @param optlen   Length of the option value
-     *  @return         0 on success, negative error code on failure
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure
      */
     virtual nsapi_error_t setstackopt(int level, int optname, const void *optval, unsigned optlen);
 
@@ -94,13 +192,19 @@ public:
      *  @param optname  Level-specific option name
      *  @param optval   Destination for option value
      *  @param optlen   Length of the option value
-     *  @return         0 on success, negative error code on failure
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure
      */
     virtual nsapi_error_t getstackopt(int level, int optname, void *optval, unsigned *optlen);
 
+    /** Dynamic downcast to a OnboardNetworkStack */
+    virtual OnboardNetworkStack *onboardNetworkStack()
+    {
+        return 0;
+    }
+
 protected:
-    friend class Socket;
-    friend class UDPSocket;
+    friend class InternetSocket;
+    friend class InternetDatagramSocket;
     friend class TCPSocket;
     friend class TCPServer;
 
@@ -114,7 +218,7 @@ protected:
      *
      *  @param handle   Destination for the handle to a newly created socket
      *  @param proto    Protocol of socket to open, NSAPI_TCP or NSAPI_UDP
-     *  @return         0 on success, negative error code on failure
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure
      */
     virtual nsapi_error_t socket_open(nsapi_socket_t *handle, nsapi_protocol_t proto) = 0;
 
@@ -124,18 +228,18 @@ protected:
      *  with the socket.
      *
      *  @param handle   Socket handle
-     *  @return         0 on success, negative error code on failure
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure
      */
     virtual nsapi_error_t socket_close(nsapi_socket_t handle) = 0;
 
     /** Bind a specific address to a socket
      *
-     *  Binding a socket specifies the address and port on which to recieve
+     *  Binding a socket specifies the address and port on which to receive
      *  data. If the IP address is zeroed, only the port is bound.
      *
      *  @param handle   Socket handle
      *  @param address  Local address to bind
-     *  @return         0 on success, negative error code on failure.
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure.
      */
     virtual nsapi_error_t socket_bind(nsapi_socket_t handle, const SocketAddress &address) = 0;
 
@@ -147,7 +251,7 @@ protected:
      *  @param handle   Socket handle
      *  @param backlog  Number of pending connections that can be queued
      *                  simultaneously
-     *  @return         0 on success, negative error code on failure
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure
      */
     virtual nsapi_error_t socket_listen(nsapi_socket_t handle, int backlog) = 0;
 
@@ -158,7 +262,7 @@ protected:
      *
      *  @param handle   Socket handle
      *  @param address  The SocketAddress of the remote host
-     *  @return         0 on success, negative error code on failure
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure
      */
     virtual nsapi_error_t socket_connect(nsapi_socket_t handle, const SocketAddress &address) = 0;
 
@@ -178,10 +282,10 @@ protected:
      *  @param server   Socket handle to server to accept from
      *  @param handle   Destination for a handle to the newly created socket
      *  @param address  Destination for the remote address or NULL
-     *  @return         0 on success, negative error code on failure
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure
      */
     virtual nsapi_error_t socket_accept(nsapi_socket_t server,
-            nsapi_socket_t *handle, SocketAddress *address=0) = 0;
+                                        nsapi_socket_t *handle, SocketAddress *address = 0) = 0;
 
     /** Send data over a TCP socket
      *
@@ -198,7 +302,7 @@ protected:
      *                  code on failure
      */
     virtual nsapi_size_or_error_t socket_send(nsapi_socket_t handle,
-            const void *data, nsapi_size_t size) = 0;
+                                              const void *data, nsapi_size_t size) = 0;
 
     /** Receive data over a TCP socket
      *
@@ -215,7 +319,7 @@ protected:
      *                  code on failure
      */
     virtual nsapi_size_or_error_t socket_recv(nsapi_socket_t handle,
-            void *data, nsapi_size_t size) = 0;
+                                              void *data, nsapi_size_t size) = 0;
 
     /** Send a packet over a UDP socket
      *
@@ -233,7 +337,7 @@ protected:
      *                  code on failure
      */
     virtual nsapi_size_or_error_t socket_sendto(nsapi_socket_t handle, const SocketAddress &address,
-            const void *data, nsapi_size_t size) = 0;
+                                                const void *data, nsapi_size_t size) = 0;
 
     /** Receive a packet over a UDP socket
      *
@@ -251,7 +355,7 @@ protected:
      *                  code on failure
      */
     virtual nsapi_size_or_error_t socket_recvfrom(nsapi_socket_t handle, SocketAddress *address,
-            void *buffer, nsapi_size_t size) = 0;
+                                                  void *buffer, nsapi_size_t size) = 0;
 
     /** Register a callback on state change of the socket
      *
@@ -268,39 +372,71 @@ protected:
      */
     virtual void socket_attach(nsapi_socket_t handle, void (*callback)(void *), void *data) = 0;
 
-    /*  Set stack-specific socket options
+    /**  Set stack-specific socket options.
      *
      *  The setsockopt allow an application to pass stack-specific hints
      *  to the underlying stack. For unsupported options,
      *  NSAPI_ERROR_UNSUPPORTED is returned and the socket is unmodified.
      *
-     *  @param handle   Socket handle
-     *  @param level    Stack-specific protocol level
-     *  @param optname  Stack-specific option identifier
-     *  @param optval   Option value
-     *  @param optlen   Length of the option value
-     *  @return         0 on success, negative error code on failure
+     *  @param handle   Socket handle.
+     *  @param level    Stack-specific protocol level.
+     *  @param optname  Stack-specific option identifier.
+     *  @param optval   Option value.
+     *  @param optlen   Length of the option value.
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure.
      */
     virtual nsapi_error_t setsockopt(nsapi_socket_t handle, int level,
-            int optname, const void *optval, unsigned optlen);
+                                     int optname, const void *optval, unsigned optlen);
 
-    /*  Get stack-specific socket options
+    /**  Get stack-specific socket options.
      *
      *  The getstackopt allow an application to retrieve stack-specific hints
      *  from the underlying stack. For unsupported options,
      *  NSAPI_ERROR_UNSUPPORTED is returned and optval is unmodified.
      *
-     *  @param handle   Socket handle
-     *  @param level    Stack-specific protocol level
-     *  @param optname  Stack-specific option identifier
-     *  @param optval   Destination for option value
-     *  @param optlen   Length of the option value
-     *  @return         0 on success, negative error code on failure
+     *  @param handle   Socket handle.
+     *  @param level    Stack-specific protocol level.
+     *  @param optname  Stack-specific option identifier.
+     *  @param optval   Destination for option value.
+     *  @param optlen   Length of the option value.
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure.
      */
     virtual nsapi_error_t getsockopt(nsapi_socket_t handle, int level,
-            int optname, void *optval, unsigned *optlen);
-};
+                                     int optname, void *optval, unsigned *optlen);
 
+private:
+
+    /** Call in callback
+      *
+      *  Callback is used to call the call in method of the network stack.
+      */
+    typedef mbed::Callback<nsapi_error_t (int delay_ms, mbed::Callback<void()> user_cb)> call_in_callback_cb_t;
+
+    /** Get a call in callback
+     *
+     *  Get a call in callback from the network stack context.
+     *
+     *  Callback should not take more than 10ms to execute, otherwise it might
+     *  prevent underlying thread processing. A portable user of the callback
+     *  should not make calls to network operations due to stack size limitations.
+     *  The callback should not perform expensive operations such as socket recv/send
+     *  calls or blocking operations.
+     *
+     *  @return         Call in callback
+     */
+    virtual call_in_callback_cb_t get_call_in_callback();
+
+    /** Call a callback after a delay
+     *
+     *  Call a callback from the network stack context after a delay. If function
+     *  returns error callback will not be called.
+     *
+     *  @param delay    Delay in milliseconds
+     *  @param func     Callback to be called
+     *  @return         NSAPI_ERROR_OK on success, negative error code on failure
+     */
+    virtual nsapi_error_t call_in(int delay, mbed::Callback<void()> func);
+};
 
 /** Convert a raw nsapi_stack_t object into a C++ NetworkStack object
  *
@@ -321,3 +457,5 @@ NetworkStack *nsapi_create_stack(IF *iface)
 
 
 #endif
+
+/** @} */

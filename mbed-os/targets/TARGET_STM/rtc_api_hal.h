@@ -1,6 +1,6 @@
 /* mbed Microcontroller Library
 *******************************************************************************
-* Copyright (c) 2016, STMicroelectronics
+* Copyright (c) 2018, STMicroelectronics
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -31,33 +31,39 @@
 #ifndef MBED_RTC_API_HAL_H
 #define MBED_RTC_API_HAL_H
 
-#include <stdint.h>
 #include "rtc_api.h"
+#include "lp_ticker_api.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-/*
- * Extend rtc_api.h
- */
 
-/** Set the given function as handler of wakeup timer event.
- *
- * @param handler    The function to set as handler
- */
-void rtc_set_irq_handler(uint32_t handler);
+#if MBED_CONF_TARGET_LSE_AVAILABLE
+#define RTC_CLOCK LSE_VALUE
+#else
+#define RTC_CLOCK LSI_VALUE
+#endif
 
-/** Read the subsecond register.
- *
- * @return The remaining time as microseconds (0-999999)
- */
-uint32_t rtc_read_subseconds(void);
+#if DEVICE_LPTICKER && !MBED_CONF_TARGET_LPTICKER_LPTIM
+/* PREDIV_A : 7-bit asynchronous prescaler */
+/* PREDIV_A is set to set LPTICKER frequency to RTC_CLOCK/4 */
+#define PREDIV_A_VALUE 3
 
-/** Program a wake up timer event in delta microseconds.
+/** Read RTC counter with sub second precision
  *
- * @param delta    The time to wait
+ * @return LP ticker counter
  */
-void rtc_set_wake_up_timer(uint32_t delta);
+uint32_t rtc_read_lp(void);
+
+/** Program a wake up timer event
+ *
+ * @param timestamp: counter to set
+ */
+void rtc_set_wake_up_timer(timestamp_t timestamp);
+
+/** Call RTC Wake Up IT
+ */
+void rtc_fire_interrupt(void);
 
 /** Disable the wake up timer event.
  *
@@ -65,12 +71,23 @@ void rtc_set_wake_up_timer(uint32_t delta);
  */
 void rtc_deactivate_wake_up_timer(void);
 
+#else /* DEVICE_LPTICKER && !MBED_CONF_TARGET_LPTICKER_LPTIM */
+
+/* PREDIV_A : 7-bit asynchronous prescaler */
+/* PREDIV_A is set to the maximum value to improve the consumption */
+#define PREDIV_A_VALUE 127
+
+#endif /* DEVICE_LPTICKER && !MBED_CONF_TARGET_LPTICKER_LPTIM */
+
+/* PREDIV_S : 15-bit synchronous prescaler */
+/* PREDIV_S is set in order to get a 1 Hz clock */
+#define PREDIV_S_VALUE (RTC_CLOCK / (PREDIV_A_VALUE + 1) - 1)
+
 /** Synchronise the RTC shadow registers.
  *
  * Must be called after a deepsleep.
  */
 void rtc_synchronize(void);
-
 
 #ifdef __cplusplus
 }

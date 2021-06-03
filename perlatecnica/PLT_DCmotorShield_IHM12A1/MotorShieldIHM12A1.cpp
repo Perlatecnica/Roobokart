@@ -18,7 +18,7 @@
 
 #include "MotorShieldIHM12A1.h"
 
-#include "../../roobopoli/roobokart/roobokart_def.h"
+#include "../../roobokart/roobokart_def.h"
 #include "mbed.h"
  
 STSpin240_250_init_t init =

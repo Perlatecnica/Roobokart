@@ -19,12 +19,11 @@
 #include "greentea-client/test_env.h"
 #include "unity.h"
 #include "utest.h"
-#include "rtos.h"
 #include "hal/us_ticker_api.h"
 
-#if !DEVICE_LOWPOWERTIMER
+#if !DEVICE_LPTICKER
 #error [NOT_SUPPORTED] test not supported
-#endif
+#else
 
 using namespace utest::v1;
 
@@ -35,32 +34,37 @@ extern uint32_t SystemCoreClock;
  * timer we need to adjust delta.
  */
 
-/* Macro to define delta based on CPU clock frequency.
- *
- * Note that some extra time is counted by the timer.
- * Additional time is caused by the function calls and
- * additional operations performed by wait and
- * stop functions before in fact timer is stopped. This may
- * add additional time to the counted result.
- *
- * To take in to account this extra time we introduce DELTA
- * value based on CPU clock (speed):
- *   DELTA = TOLERANCE_FACTOR / SystemCoreClock * US_FACTOR
- *
- *   e.g.
- *   For K64F          DELTA = (40000 / 120000000) * 1000000 = 333[us]
- *   For NUCLEO_F070RB DELTA = (40000 /  48000000) * 1000000 = 833[us]
- *   For NRF51_DK      DELTA = (40000 /  16000000) * 1000000 = 2500[us]
- */
+/*
+* Define tolerance as follows:
+* tolerance = 500 us + 5% of measured time
+*
+* e.g.
+* 1 ms delay: tolerance = 550 us
+* 10 ms delay: tolerance = 1000 us
+* 100 ms delay: tolerance = 5500 us
+* 1000 ms delay: tolerance = 50500 us
+*
+*  */
+
 #define US_PER_SEC       1000000
-#define TOLERANCE_FACTOR 40000.0f
-#define US_FACTOR        1000000.0f
+#define US_PER_MSEC      1000
+#define MSEC_PER_SEC     1000
 
-static const int delta_sys_clk_us = ((int) (TOLERANCE_FACTOR / (float) SystemCoreClock * US_FACTOR));
+#define DELTA_US(delay_ms) (500 + (delay_ms) * US_PER_MSEC / 20)
+#define DELTA_MS(delay_ms) (1 + ((delay_ms) * US_PER_MSEC / 20 / US_PER_MSEC))
+#define DELTA_S(delay_ms) (0.000500f + (((float)(delay_ms)) / MSEC_PER_SEC / 20))
 
-#define DELTA_US delta_sys_clk_us
-#define DELTA_S  ((float)delta_sys_clk_us/US_PER_SEC)
-#define DELTA_MS 1
+void busy_wait_us(int us)
+{
+    const ticker_data_t *const ticker = get_us_ticker_data();
+    uint32_t start = ticker_read(ticker);
+    while ((ticker_read(ticker) - start) < (uint32_t)us);
+}
+
+void busy_wait_ms(int ms)
+{
+    busy_wait_us(ms * US_PER_MSEC);
+}
 
 /* This test verifies if low power timer is stopped after
  * creation.
@@ -75,19 +79,19 @@ void test_lptimer_creation()
 
     /* Check results. */
     TEST_ASSERT_EQUAL_FLOAT(0, lp_timer.read());
-    TEST_ASSERT_EQUAL(0, lp_timer.read_ms());
-    TEST_ASSERT_EQUAL(0, lp_timer.read_us());
-    TEST_ASSERT_EQUAL(0, lp_timer.read_high_resolution_us());
+    TEST_ASSERT_EQUAL_INT32(0, lp_timer.read_ms());
+    TEST_ASSERT_EQUAL_INT32(0, lp_timer.read_us());
+    TEST_ASSERT_EQUAL_UINT64(0, lp_timer.read_high_resolution_us());
 
     /* Wait 10 ms.
      * After that operation timer read routines should still return 0. */
-    wait_ms(10);
+    busy_wait_ms(10);
 
     /* Check results. */
     TEST_ASSERT_EQUAL_FLOAT(0, lp_timer.read());
-    TEST_ASSERT_EQUAL(0, lp_timer.read_ms());
-    TEST_ASSERT_EQUAL(0, lp_timer.read_us());
-    TEST_ASSERT_EQUAL(0, lp_timer.read_high_resolution_us());
+    TEST_ASSERT_EQUAL_INT32(0, lp_timer.read_ms());
+    TEST_ASSERT_EQUAL_INT32(0, lp_timer.read_us());
+    TEST_ASSERT_EQUAL_UINT64(0, lp_timer.read_high_resolution_us());
 }
 
 /* This test verifies if read(), read_us(), read_ms(),
@@ -109,21 +113,21 @@ void test_lptimer_time_accumulation()
     lp_timer.start();
 
     /* Wait 10 ms. */
-    wait_ms(10);
+    busy_wait_ms(10);
 
     /* Stop the timer. */
     lp_timer.stop();
 
     /* Check results - totally 10 ms have elapsed. */
-    TEST_ASSERT_FLOAT_WITHIN(DELTA_S, 0.010f, lp_timer.read());
-    TEST_ASSERT_INT32_WITHIN(DELTA_MS, 10, lp_timer.read_ms());
-    TEST_ASSERT_INT32_WITHIN(DELTA_US, 10000, lp_timer.read_us());
-    TEST_ASSERT_UINT64_WITHIN(DELTA_US, 10000, lp_timer.read_high_resolution_us());
+    TEST_ASSERT_FLOAT_WITHIN(DELTA_S(10), 0.010f, lp_timer.read());
+    TEST_ASSERT_INT32_WITHIN(DELTA_MS(10), 10, lp_timer.read_ms());
+    TEST_ASSERT_INT32_WITHIN(DELTA_US(10), 10000, lp_timer.read_us());
+    TEST_ASSERT_UINT64_WITHIN(DELTA_US(10), 10000, lp_timer.read_high_resolution_us());
 
     /* Wait 50 ms - this is done to show that time elapsed when
      * the timer is stopped does not have influence on the
      * timer counted time. */
-    wait_ms(50);
+    busy_wait_ms(50);
 
     /* ------ */
 
@@ -131,16 +135,16 @@ void test_lptimer_time_accumulation()
     lp_timer.start();
 
     /* Wait 20 ms. */
-    wait_ms(20);
+    busy_wait_ms(20);
 
     /* Stop the timer. */
     lp_timer.stop();
 
     /* Check results - totally 30 ms have elapsed. */
-    TEST_ASSERT_FLOAT_WITHIN(2 * DELTA_S, 0.030f, lp_timer.read());
-    TEST_ASSERT_INT32_WITHIN(DELTA_MS, 30, lp_timer.read_ms());
-    TEST_ASSERT_INT32_WITHIN(2 * DELTA_US, 30000, lp_timer.read_us());
-    TEST_ASSERT_UINT64_WITHIN(2 * DELTA_US, 30000, lp_timer.read_high_resolution_us());
+    TEST_ASSERT_FLOAT_WITHIN(DELTA_S(30), 0.030f, lp_timer.read());
+    TEST_ASSERT_INT32_WITHIN(DELTA_MS(30), 30, lp_timer.read_ms());
+    TEST_ASSERT_INT32_WITHIN(DELTA_US(30), 30000, lp_timer.read_us());
+    TEST_ASSERT_UINT64_WITHIN(DELTA_US(30), 30000, lp_timer.read_high_resolution_us());
 
     /* Wait 50 ms - this is done to show that time elapsed when
      * the timer is stopped does not have influence on the
@@ -152,21 +156,21 @@ void test_lptimer_time_accumulation()
     lp_timer.start();
 
     /* Wait 30 ms. */
-    wait_ms(30);
+    busy_wait_ms(30);
 
     /* Stop the timer. */
     lp_timer.stop();
 
     /* Check results - totally 60 ms have elapsed. */
-    TEST_ASSERT_FLOAT_WITHIN(3 * DELTA_S, 0.060f, lp_timer.read());
-    TEST_ASSERT_INT32_WITHIN(DELTA_MS, 60, lp_timer.read_ms());
-    TEST_ASSERT_INT32_WITHIN(3 * DELTA_US, 60000, lp_timer.read_us());
-    TEST_ASSERT_UINT64_WITHIN(3 * DELTA_US, 60000, lp_timer.read_high_resolution_us());
+    TEST_ASSERT_FLOAT_WITHIN(DELTA_S(60), 0.060f, lp_timer.read());
+    TEST_ASSERT_INT32_WITHIN(DELTA_MS(60), 60, lp_timer.read_ms());
+    TEST_ASSERT_INT32_WITHIN(DELTA_US(60), 60000, lp_timer.read_us());
+    TEST_ASSERT_UINT64_WITHIN(DELTA_US(60), 60000, lp_timer.read_high_resolution_us());
 
     /* Wait 50 ms - this is done to show that time elapsed when
      * the timer is stopped does not have influence on the
      * timer time. */
-    wait_ms(50);
+    busy_wait_ms(50);
 
     /* ------ */
 
@@ -174,16 +178,16 @@ void test_lptimer_time_accumulation()
     lp_timer.start();
 
     /* Wait 1 sec. */
-    wait_ms(1000);
+    busy_wait_ms(1000);
 
     /* Stop the timer. */
     lp_timer.stop();
 
-    /* Check results - totally 5060 ms have elapsed. */
-    TEST_ASSERT_FLOAT_WITHIN(4 * DELTA_S, 1.060f, lp_timer.read());
-    TEST_ASSERT_INT32_WITHIN(DELTA_MS, 1060, lp_timer.read_ms());
-    TEST_ASSERT_INT32_WITHIN(4 * DELTA_US, 1060000, lp_timer.read_us());
-    TEST_ASSERT_UINT64_WITHIN(4 * DELTA_US, 1060000, lp_timer.read_high_resolution_us());
+    /* Check results - totally 1060 ms have elapsed. */
+    TEST_ASSERT_FLOAT_WITHIN(DELTA_S(1060), 1.060f, lp_timer.read());
+    TEST_ASSERT_INT32_WITHIN(DELTA_MS(1060), 1060, lp_timer.read_ms());
+    TEST_ASSERT_INT32_WITHIN(DELTA_US(1060), 1060000, lp_timer.read_us());
+    TEST_ASSERT_UINT64_WITHIN(DELTA_US(1060), 1060000, lp_timer.read_high_resolution_us());
 }
 
 /* This test verifies if reset() function resets the
@@ -203,16 +207,16 @@ void test_lptimer_reset()
     lp_timer.start();
 
     /* Wait 10 ms. */
-    wait_ms(10);
+    busy_wait_ms(10);
 
     /* Stop the timer. */
     lp_timer.stop();
 
     /* Check results - totally 10 ms elapsed. */
-    TEST_ASSERT_FLOAT_WITHIN(DELTA_S, 0.010f, lp_timer.read());
-    TEST_ASSERT_INT32_WITHIN(DELTA_MS, 10, lp_timer.read_ms());
-    TEST_ASSERT_INT32_WITHIN(DELTA_US, 10000, lp_timer.read_us());
-    TEST_ASSERT_UINT64_WITHIN(DELTA_US, 10000, lp_timer.read_high_resolution_us());
+    TEST_ASSERT_FLOAT_WITHIN(DELTA_S(10), 0.010f, lp_timer.read());
+    TEST_ASSERT_INT32_WITHIN(DELTA_MS(10), 10, lp_timer.read_ms());
+    TEST_ASSERT_INT32_WITHIN(DELTA_US(10), 10000, lp_timer.read_us());
+    TEST_ASSERT_UINT64_WITHIN(DELTA_US(10), 10000, lp_timer.read_high_resolution_us());
 
     /* Reset the timer - previous measured time should be lost now. */
     lp_timer.reset();
@@ -221,16 +225,16 @@ void test_lptimer_reset()
     lp_timer.start();
 
     /* Wait 20 ms. */
-    wait_ms(20);
+    busy_wait_ms(20);
 
     /* Stop the timer. */
     lp_timer.stop();
 
     /* Check results - 20 ms elapsed since the reset. */
-    TEST_ASSERT_FLOAT_WITHIN(DELTA_S, 0.020f, lp_timer.read());
-    TEST_ASSERT_INT32_WITHIN(DELTA_MS, 20, lp_timer.read_ms());
-    TEST_ASSERT_INT32_WITHIN(DELTA_US, 20000, lp_timer.read_us());
-    TEST_ASSERT_UINT64_WITHIN(DELTA_US, 20000, lp_timer.read_high_resolution_us());
+    TEST_ASSERT_FLOAT_WITHIN(DELTA_S(20), 0.020f, lp_timer.read());
+    TEST_ASSERT_INT32_WITHIN(DELTA_MS(20), 20, lp_timer.read_ms());
+    TEST_ASSERT_INT32_WITHIN(DELTA_US(20), 20000, lp_timer.read_us());
+    TEST_ASSERT_UINT64_WITHIN(DELTA_US(20), 20000, lp_timer.read_high_resolution_us());
 }
 
 /* This test verifies if calling start() for already
@@ -248,22 +252,22 @@ void test_lptimer_start_started_timer()
     lp_timer.start();
 
     /* Wait 10 ms. */
-    wait_ms(10);
+    busy_wait_ms(10);
 
     /* Now start timer again. */
     lp_timer.start();
 
     /* Wait 20 ms. */
-    wait_ms(20);
+    busy_wait_ms(20);
 
     /* Stop the timer. */
     lp_timer.stop();
 
     /* Check results - 30 ms have elapsed since the first start. */
-    TEST_ASSERT_FLOAT_WITHIN(2 * DELTA_S, 0.030f, lp_timer.read());
-    TEST_ASSERT_INT32_WITHIN(DELTA_MS, 30, lp_timer.read_ms());
-    TEST_ASSERT_INT32_WITHIN(2 * DELTA_US, 30000, lp_timer.read_us());
-    TEST_ASSERT_UINT64_WITHIN(2 * DELTA_US, 30000, lp_timer.read_high_resolution_us());
+    TEST_ASSERT_FLOAT_WITHIN(DELTA_S(30), 0.030f, lp_timer.read());
+    TEST_ASSERT_INT32_WITHIN(DELTA_MS(30), 30, lp_timer.read_ms());
+    TEST_ASSERT_INT32_WITHIN(DELTA_US(30), 30000, lp_timer.read_us());
+    TEST_ASSERT_UINT64_WITHIN(DELTA_US(30), 30000, lp_timer.read_high_resolution_us());
 }
 
 /* This test verifies low power timer float operator.
@@ -281,13 +285,13 @@ void test_lptimer_float_operator()
     lp_timer.start();
 
     /* Wait 10 ms. */
-    wait_ms(10);
+    busy_wait_ms(10);
 
     /* Stop the timer. */
     lp_timer.stop();
 
     /* Check result - 10 ms elapsed. */
-    TEST_ASSERT_FLOAT_WITHIN(DELTA_S, 0.010f, (float )(lp_timer));
+    TEST_ASSERT_FLOAT_WITHIN(DELTA_S(10), 0.010f, (float)(lp_timer));
 }
 
 /* This test verifies if time counted by the low power timer is
@@ -303,20 +307,22 @@ void test_lptimer_time_measurement()
 {
     LowPowerTimer lp_timer;
 
+    const int delta_ms = (wait_val_us / US_PER_MSEC);
+
     /* Start the timer. */
     lp_timer.start();
 
     /* Wait <wait_val_us> us. */
-    wait_us(wait_val_us);
+    busy_wait_us(wait_val_us);
 
     /* Stop the timer. */
     lp_timer.stop();
 
     /* Check results - wait_val_us us have elapsed. */
-    TEST_ASSERT_FLOAT_WITHIN(DELTA_S, (float )wait_val_us / 1000000, lp_timer.read());
-    TEST_ASSERT_INT32_WITHIN(DELTA_MS, wait_val_us / 1000, lp_timer.read_ms());
-    TEST_ASSERT_INT32_WITHIN(DELTA_US, wait_val_us, lp_timer.read_us());
-    TEST_ASSERT_UINT64_WITHIN(DELTA_US, wait_val_us, lp_timer.read_high_resolution_us());
+    TEST_ASSERT_FLOAT_WITHIN(DELTA_S(delta_ms), (float)wait_val_us / 1000000, lp_timer.read());
+    TEST_ASSERT_INT32_WITHIN(DELTA_MS(delta_ms), wait_val_us / 1000, lp_timer.read_ms());
+    TEST_ASSERT_INT32_WITHIN(DELTA_US(delta_ms), wait_val_us, lp_timer.read_us());
+    TEST_ASSERT_UINT64_WITHIN(DELTA_US(delta_ms), wait_val_us, lp_timer.read_high_resolution_us());
 }
 
 utest::v1::status_t test_setup(const size_t number_of_cases)
@@ -343,3 +349,5 @@ int main()
 {
     return !Harness::run(specification);
 }
+
+#endif // !DEVICE_LPTICKER

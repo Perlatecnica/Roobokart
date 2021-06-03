@@ -1,6 +1,6 @@
 """
 mbed SDK
-Copyright (c) 2011-2016 ARM Limited
+Copyright (c) 2011-2019 ARM Limited
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,13 +22,16 @@ the MCUXpresso IDE from NXP
 Based on GNU ARM Eclipse Exporter from Liviu Ionescu <ilg@livius.net>
 modified for MCUXpresso by Johannes Stratmann <jojos62@online.de>
 """
+from __future__ import print_function, absolute_import
+from builtins import str
 
 import copy
 import tempfile
 import shutil
+import re
 
 from subprocess import Popen, PIPE
-from os import getcwd, remove
+from os import getcwd, remove, listdir
 from os.path import splitext, basename, exists
 from random import randint
 
@@ -37,9 +40,6 @@ from tools.export.exporters import apply_supported_whitelist
 from tools.targets import TARGET_MAP
 from tools.utils import NotSupportedException
 from tools.build_api import prepare_toolchain
-
-
-# =============================================================================
 
 
 POST_BINARY_WHITELIST = set([
@@ -55,10 +55,19 @@ class MCUXpresso(GNUARMEclipse):
 
     MBED_CONFIG_HEADER_SUPPORTED = True
 
+    @staticmethod
+    def is_target_name_in_dir(path, target_name):
+        # toos/export/mcuxpresso/ has entries with
+        # both lower and upper case. Handle these inconsistencies.
+        for entry in listdir(path):
+            if(re.match(entry, target_name + '_cproject.tmpl', re.IGNORECASE)):
+                return True
+        return False
+
     @classmethod
     def is_target_supported(cls, target_name):
-        # targes suppoerted when .cproject templatefile exists
-        if exists(cls.TEMPLATE_DIR + '/mcuxpresso/' + target_name + '_cproject.tmpl'):
+        # target is supported when *_cproject.tmpl template file exists
+        if MCUXpresso.is_target_name_in_dir(cls.TEMPLATE_DIR + '/mcuxpresso/', target_name):
             target = TARGET_MAP[target_name]
             return apply_supported_whitelist(
                 cls.TOOLCHAIN, POST_BINARY_WHITELIST, target)
@@ -73,22 +82,16 @@ class MCUXpresso(GNUARMEclipse):
         if not self.resources.linker_script:
             raise NotSupportedException("No linker script found.")
 
-        print
-        print 'Create a GNU ARM Eclipse C++ managed project'
-        print 'Project name: {0}'.format(self.project_name)
-        print 'Target: {0}'.format(self.toolchain.target.name)
-        print 'Toolchain: {0}'.format(self.TOOLCHAIN)
-
         self.resources.win_to_unix()
 
         # TODO: use some logger to display additional info if verbose
 
-        self.libraries = []
+        libraries = []
         # print 'libraries'
         # print self.resources.libraries
-        for lib in self.resources.libraries:
+        for lib in self.libraries:
             l, _ = splitext(basename(lib))
-            self.libraries.append(l[3:])
+            libraries.append(l[3:])
 
         self.system_libraries = [
             'stdc++', 'supc++', 'm', 'c', 'gcc', 'nosys'
@@ -115,16 +118,13 @@ class MCUXpresso(GNUARMEclipse):
 
         self.include_path = [
             self.filter_dot(s) for s in self.resources.inc_dirs]
-        print 'Include folders: {0}'.format(len(self.include_path))
 
         self.as_defines = self.toolchain.get_symbols(True)
         self.c_defines = self.toolchain.get_symbols()
         self.cpp_defines = self.c_defines
-        print 'Symbols: {0}'.format(len(self.c_defines))
 
         self.ld_script = self.filter_dot(
             self.resources.linker_script)
-        print 'Linker script: {0}'.format(self.ld_script)
 
         self.options = {}
         profile_ids.remove('develop')
@@ -143,7 +143,6 @@ class MCUXpresso(GNUARMEclipse):
             opts['name'] = opts['id'].capitalize()
 
             print
-            print 'Build configuration: {0}'.format(opts['name'])
 
             profile = profiles[id]
 
@@ -159,12 +158,6 @@ class MCUXpresso(GNUARMEclipse):
 
             flags = self.toolchain_flags(toolchain)
 
-            print 'Common flags:', ' '.join(flags['common_flags'])
-            print 'C++ flags:', ' '.join(flags['cxx_flags'])
-            print 'C flags:', ' '.join(flags['c_flags'])
-            print 'ASM flags:', ' '.join(flags['asm_flags'])
-            print 'Linker flags:', ' '.join(flags['ld_flags'])
-
             # Most GNU ARM Eclipse options have a parent,
             # either debug or release.
             if '-O0' in flags['common_flags'] or '-Og' in flags['common_flags']:
@@ -172,7 +165,7 @@ class MCUXpresso(GNUARMEclipse):
             else:
                 opts['parent_id'] = 'release'
 
-            self.process_options(opts, flags)
+            self.process_options(opts, flags, libraries)
 
             opts['as']['defines'] = self.as_defines
             opts['c']['defines'] = self.c_defines
@@ -187,7 +180,7 @@ class MCUXpresso(GNUARMEclipse):
                 self.filter_dot(s) for s in self.resources.lib_dirs]
 
             opts['ld']['object_files'] = objects
-            opts['ld']['user_libraries'] = self.libraries
+            opts['ld']['user_libraries'] = libraries
             opts['ld']['system_libraries'] = self.system_libraries
             opts['ld']['script'] = "linker-script-%s.ld" % id
             opts['cpp_cmd'] = " ".join(toolchain.preproc)
@@ -224,10 +217,22 @@ class MCUXpresso(GNUARMEclipse):
                       '.cproject', trim_blocks=True, lstrip_blocks=True)
         self.gen_file('mcuxpresso/makefile.targets.tmpl', jinja_ctx,
                       'makefile.targets', trim_blocks=True, lstrip_blocks=True)
-        self.gen_file('mcuxpresso/mbedignore.tmpl', jinja_ctx, '.mbedignore')
+        self.gen_file_nonoverwrite('mcuxpresso/mbedignore.tmpl', jinja_ctx,
+                                   '.mbedignore')
 
-        print
-        print 'Done. Import the \'{0}\' project in Eclipse.'.format(self.project_name)
+        print('Done. Import the \'{0}\' project in MCUXpresso.'.format(
+            self.project_name))
+
+    @staticmethod
+    def clean(_):
+        remove('.project')
+        remove('.cproject')
+        if exists('Debug'):
+            shutil.rmtree('Debug')
+        if exists('Release'):
+            shutil.rmtree('Release')
+        if exists('makefile.targets'):
+            remove('makefile.targets')
 
     # override
     @staticmethod
@@ -284,7 +289,7 @@ class MCUXpresso(GNUARMEclipse):
         else:
             ret_string = "FAILURE: build returned %s \n" % ret_code
 
-        print "%s\n%s\n%s\n%s" % (stdout_string, out, err_string, ret_string)
+        print("%s\n%s\n%s\n%s" % (stdout_string, out, err_string, ret_string))
 
         if log_name:
             # Write the output to the log file
@@ -298,14 +303,7 @@ class MCUXpresso(GNUARMEclipse):
         if cleanup:
             if exists(log_name):
                 remove(log_name)
-            remove('.project')
-            remove('.cproject')
-            if exists('Debug'):
-                shutil.rmtree('Debug')
-            if exists('Release'):
-                shutil.rmtree('Release')
-            if exists('makefile.targets'):
-                remove('makefile.targets')
+            MCUXpresso.clean(project_name)
 
         # Always remove the temporary folder.
         if exists(tmp_folder):
@@ -316,7 +314,7 @@ class MCUXpresso(GNUARMEclipse):
 
     # -------------------------------------------------------------------------
 
-    def process_options(self, opts, flags_in):
+    def process_options(self, opts, flags_in, libraries):
         """
         CDT managed projects store lots of build options in separate
         variables, with separate IDs in the .cproject file.
@@ -340,14 +338,6 @@ class MCUXpresso(GNUARMEclipse):
 
         # Make a copy of the flags, to be one by one removed after processing.
         flags = copy.deepcopy(flags_in)
-
-        if False:
-            print
-            print 'common_flags', flags['common_flags']
-            print 'asm_flags', flags['asm_flags']
-            print 'c_flags', flags['c_flags']
-            print 'cxx_flags', flags['cxx_flags']
-            print 'ld_flags', flags['ld_flags']
 
         # Initialise the 'last resort' options where all unrecognised
         # options will be collected.
@@ -720,7 +710,7 @@ class MCUXpresso(GNUARMEclipse):
             opts['ld'][
                 'other'] += ' '.join('-l' + s for s in self.system_libraries) + ' '
             opts['ld'][
-                'other'] += ' '.join('-l' + s for s in self.libraries)
+                'other'] += ' '.join('-l' + s for s in libraries)
             opts['ld']['other'] += ' -Wl,--end-group '
 
         # Strip all 'other' flags, since they might have leading spaces.
@@ -728,15 +718,3 @@ class MCUXpresso(GNUARMEclipse):
         opts['c']['other'] = opts['c']['other'].strip()
         opts['cpp']['other'] = opts['cpp']['other'].strip()
         opts['ld']['other'] = opts['ld']['other'].strip()
-
-        if False:
-            print
-            print opts
-
-            print
-            print 'common_flags', flags['common_flags']
-            print 'asm_flags', flags['asm_flags']
-            print 'c_flags', flags['c_flags']
-            print 'cxx_flags', flags['cxx_flags']
-            print 'ld_flags', flags['ld_flags']
-

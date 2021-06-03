@@ -21,12 +21,16 @@
 #include "mbed-drivers/mbed.h"
 #include "mbed-drivers/Stream.h"
 #else
-#include "mbed.h"
 #include "Stream.h"
 #endif
 
 #include "ble/UUID.h"
 #include "ble/BLE.h"
+#include "ble/pal/Deprecated.h"
+
+#if BLE_FEATURE_GATT_SERVER
+
+BLE_DEPRECATED_API_USE_BEGIN()
 
 extern const uint8_t  UARTServiceBaseUUID[UUID::LENGTH_OF_LONG_UUID];
 extern const uint16_t UARTServiceShortUUID;
@@ -40,9 +44,15 @@ extern const uint8_t  UARTServiceTXCharacteristicUUID[UUID::LENGTH_OF_LONG_UUID]
 extern const uint8_t  UARTServiceRXCharacteristicUUID[UUID::LENGTH_OF_LONG_UUID];
 
 /**
-* @class UARTService.
-* @brief BLE Service to enable UART over BLE.
-*/
+ * @class UARTService.
+ * @brief BLE Service to enable UART over BLE.
+ *
+ * @deprecated This service is deprecated, and no replacement is currently available.
+ */
+MBED_DEPRECATED_SINCE(
+    "mbed-os-5.13",
+    "This service is deprecated, and no replacement is currently available."
+)
 class UARTService {
 public:
     /** Maximum length of data (in bytes) that the UART service module can transmit to the peer. */
@@ -51,7 +61,7 @@ public:
 public:
 
     /**
-    * @param[ref] ble
+    * @param _ble
     *               BLE object for the underlying controller.
     */
     UARTService(BLE &_ble) :
@@ -98,7 +108,7 @@ public:
      * a long read request; this is because notifications include only the first
      * 20 bytes of the updated data.
      *
-     * @param  buffer The received update.
+     * @param  _buffer The received update.
      * @param  length Number of characters to be appended.
      * @return        Number of characters appended to the rxCharacteristic.
      */
@@ -215,5 +225,9 @@ protected:
                                            *   they'd read from in order to receive the bytes transmitted by this
                                            *   application. */
 };
+
+BLE_DEPRECATED_API_USE_END()
+
+#endif // BLE_FEATURE_GATT_SERVER
 
 #endif /* #ifndef __BLE_UART_SERVICE_H__*/

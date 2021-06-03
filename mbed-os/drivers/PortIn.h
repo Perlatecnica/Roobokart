@@ -1,5 +1,6 @@
 /* mbed Microcontroller Library
- * Copyright (c) 2006-2013 ARM Limited
+ * Copyright (c) 2006-2019 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +19,16 @@
 
 #include "platform/platform.h"
 
-#if defined (DEVICE_PORTIN) || defined(DOXYGEN_ONLY)
+#if DEVICE_PORTIN || defined(DOXYGEN_ONLY)
 
 #include "hal/port_api.h"
-#include "platform/mbed_critical.h"
 
 namespace mbed {
-/** \addtogroup drivers */
+/**
+ * \defgroup drivers_PortIn PortIn class
+ * \ingroup drivers-public-api-gpio
+ * @{
+ */
 
 /** A multiple pin digital input
  *
@@ -32,46 +36,42 @@ namespace mbed {
  *
  *  Example:
  * @code
- * // Switch on an LED if any of mbed pins 21-26 is high
+ * // Turn on an LED if any pins of Port2[0:5] are high
  *
  * #include "mbed.h"
  *
- * PortIn     p(Port2, 0x0000003F);   // p21-p26
- * DigitalOut ind(LED4);
+ * PortIn     p(Port2, 0x0000003F);  // Port2 pins [0:5] only
+ * DigitalOut led(LED4);
  *
  * int main() {
  *     while(1) {
  *         int pins = p.read();
  *         if(pins) {
- *             ind = 1;
+ *             led = 1;
  *         } else {
- *             ind = 0;
+ *             led = 0;
  *         }
  *     }
  * }
  * @endcode
- * @ingroup drivers
  */
 class PortIn {
 public:
 
-    /** Create an PortIn, connected to the specified port
+    /** Create a PortIn, connected to the specified port
      *
-     *  @param port Port to connect to (Port0-Port5)
-     *  @param mask A bitmask to identify which bits in the port should be included (0 - ignore)
+     *  @param port Port to connect to (as defined in target's PortNames.h)
+     *  @param mask Bitmask defines which port pins should be an input (0 - ignore, 1 - include)
         */
-    PortIn(PortName port, int mask = 0xFFFFFFFF) {
-        core_util_critical_section_enter();
-        port_init(&_port, port, mask, PIN_INPUT);
-        core_util_critical_section_exit();
-    }
+    PortIn(PortName port, int mask = 0xFFFFFFFF);
 
-    /** Read the value currently output on the port
+    /** Read the value input to the port
      *
      *  @returns
-     *    An integer with each bit corresponding to associated port pin setting
+     *    An integer with each bit corresponding to the associated pin value
      */
-    int read() {
+    int read()
+    {
         return port_read(&_port);
     }
 
@@ -79,21 +79,20 @@ public:
      *
      *  @param mode PullUp, PullDown, PullNone, OpenDrain
      */
-    void mode(PinMode mode) {
-        core_util_critical_section_enter();
-        port_mode(&_port, mode);
-        core_util_critical_section_exit();
-    }
+    void mode(PinMode mode);
 
     /** A shorthand for read()
      */
-    operator int() {
+    operator int()
+    {
         return read();
     }
 
 private:
     port_t _port;
 };
+
+/** @}*/
 
 } // namespace mbed
 

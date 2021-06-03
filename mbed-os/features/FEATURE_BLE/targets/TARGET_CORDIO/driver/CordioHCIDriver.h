@@ -19,6 +19,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <BLETypes.h>
 #include "wsf_buf.h"
 #include "CordioHCITransportDriver.h"
 
@@ -58,6 +59,10 @@ struct buf_pool_desc_t {
  *   - Access to the write function of the underlying HCITransport driver.
  */
 class CordioHCIDriver {
+
+    // hook for internal tests and passthrough driver
+    friend class CordioHCIHook;
+
 public:
     /**
      * Construct a new instance of an HCI driver.
@@ -73,7 +78,7 @@ public:
     /**
      * Return the set of memory pool which will be used by the Cordio stack
      */
-    virtual buf_pool_desc_t get_buffer_pool_description();
+    virtual buf_pool_desc_t get_buffer_pool_description() = 0;
 
     /**
      * Initialize the HCI driver.
@@ -105,6 +110,13 @@ public:
     virtual void handle_reset_sequence(uint8_t *msg);
 
     /**
+     * Get the random static address of the controller
+     *
+     * @return false if the address has not been set and true otherwise.
+     */
+    virtual bool get_random_static_address(ble::address_t& address);
+
+    /**
      * Signal to the stack that the reset sequence has been done.
      */
     void signal_reset_sequence_done();
@@ -121,6 +133,23 @@ public:
      * @return The number of bytes which have been transmited.
      */
     uint16_t write(uint8_t type, uint16_t len, uint8_t *pData);
+
+    /**
+     * React to host stack inactivity.
+     *
+     * The host stack invoke this function when it is inactive. It allows a
+     * driver to put its controller to sleep if all the conditions are met.
+     *
+     * Any call to write signals to the driver that the host stack is active.
+     */
+     virtual void on_host_stack_inactivity();
+
+protected:
+    /**
+     * Return a default set of memory pool that the Cordio stack can use.
+     * This function can be used to implement get_buffer_pool_description().
+     */
+    buf_pool_desc_t get_default_buffer_pool_description();
 
 private:
     /**

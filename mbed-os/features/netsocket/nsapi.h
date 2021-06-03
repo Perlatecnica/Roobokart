@@ -33,15 +33,19 @@
 #include "netsocket/NetworkInterface.h"
 #include "netsocket/EthInterface.h"
 #include "netsocket/WiFiInterface.h"
-#include "netsocket/CellularInterface.h"
+#include "netsocket/CellularBase.h"
 #include "netsocket/MeshInterface.h"
 
 #include "netsocket/Socket.h"
 #include "netsocket/UDPSocket.h"
 #include "netsocket/TCPSocket.h"
 #include "netsocket/TCPServer.h"
+#include "netsocket/TLSSocketWrapper.h"
+#include "netsocket/DTLSSocketWrapper.h"
+#include "netsocket/TLSSocket.h"
+#include "netsocket/DTLSSocket.h"
 
-#endif
+#endif // __cplusplus
 
 
 #endif

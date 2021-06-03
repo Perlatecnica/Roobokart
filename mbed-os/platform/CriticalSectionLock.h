@@ -1,6 +1,6 @@
 /*
- * PackageLicenseDeclared: Apache-2.0
- * Copyright (c) 2017 ARM Limited
+ * Copyright (c) 2017-2019 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,53 +18,77 @@
 #ifndef MBED_CRITICALSECTIONLOCK_H
 #define MBED_CRITICALSECTIONLOCK_H
 
-#include "platform/mbed_critical.h"
+#include "platform/mbed_toolchain.h"
 
 namespace mbed {
+/** \addtogroup platform-public-api */
+/** @{*/
+/**
+ * \defgroup platform_CriticalSectionLock CriticalSectionLock functions
+ * @{
+ */
 
 /** RAII object for disabling, then restoring, interrupt state
   * Usage:
   * @code
   *
-  * void f() {
-  *     // some code here
-  *     {
-  *         CriticalSectionLock lock;
-  *         // Code in this block will run with interrupts disabled
-  *     }
-  *     // interrupts will be restored to their previous state
+  * // RAII style usage
+  * unsigned int atomic_counter_increment(unsigned int &counter) {
+  *     CriticalSectionLock lock;
+  *     // Code in this block will run with interrupts disabled
+  *     // Interrupts will be restored to their previous state automatically
+  *     // at the end of function scope
+  *     return ++counter;
   * }
+  *
+  * // free locking usage
+  * unsigned int atomic_counter_decrement(unsigned int &counter) {
+  *     CriticalSectionLock::enable();
+  *     // Code in this block will run with interrupts disabled
+  *     counter--;
+  *     CriticalSectionLock::disable(); // need explicitly to disable critical section lock
+  *     // interrupts will be restored to their previous state here
+  *     return counter;
+  * }
+  *
   * @endcode
   */
 class CriticalSectionLock {
 public:
-    CriticalSectionLock() 
-    {
-        core_util_critical_section_enter();
-    }
+    CriticalSectionLock();
 
-    ~CriticalSectionLock() 
-    {
-        core_util_critical_section_exit();
-    }
+    ~CriticalSectionLock();
 
     /** Mark the start of a critical section
-     *     
+     *  @deprecated This function is inconsistent with RAII and is being removed in the future. Replaced by static function CriticalSectionLock::enable.
+     *
      */
-    void lock()
-    {
-        core_util_critical_section_enter();
-    }
+    MBED_DEPRECATED_SINCE("mbed-os-5.8",
+                          "This function is inconsistent with RAII and is being removed in the future."
+                          "Replaced by static function CriticalSectionLock::enable.")
+    void lock();
 
     /** Mark the end of a critical section
-     *     
+     *  @deprecated This function is inconsistent with RAII and is being removed in the future. Replaced by static function CriticalSectionLock::enable.
+     *
      */
-    void unlock()
-    {
-        core_util_critical_section_exit();
-    }
+    MBED_DEPRECATED_SINCE("mbed-os-5.8",
+                          "This function is inconsistent with RAII and is being removed in the future."
+                          "Replaced by static function CriticalSectionLock::disable.")
+    void unlock();
+
+    /** Mark the start of a critical section
+     */
+    static void enable();
+
+    /** Mark the end of a critical section
+     */
+    static void disable();
 };
 
+/**@}*/
+
+/**@}*/
 
 } // namespace mbed
 

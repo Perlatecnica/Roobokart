@@ -1,5 +1,6 @@
 /* mbed Microcontroller Library
  * Copyright (c) 2006-2013 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +19,7 @@
 
 #include "platform/platform.h"
 
-#if defined (DEVICE_INTERRUPTIN) || defined(DOXYGEN_ONLY)
+#if DEVICE_INTERRUPTIN || defined(DOXYGEN_ONLY)
 
 #include "hal/gpio_api.h"
 #include "hal/gpio_irq_api.h"
@@ -28,7 +29,11 @@
 #include "platform/NonCopyable.h"
 
 namespace mbed {
-/** \addtogroup drivers */
+/**
+ * \defgroup drivers_InterruptIn InterruptIn class
+ * \ingroup drivers-public-api-gpio
+ * @{
+ */
 
 /** A digital interrupt input, used to call a function on a rising or falling edge
  *
@@ -48,6 +53,7 @@ namespace mbed {
  * }
  *
  * int main() {
+ *     // register trigger() to be called upon the rising edge of event
  *     event.rise(&trigger);
  *     while(1) {
  *         led = !led;
@@ -55,7 +61,6 @@ namespace mbed {
  *     }
  * }
  * @endcode
- * @ingroup drivers
  */
 class InterruptIn : private NonCopyable<InterruptIn> {
 
@@ -66,6 +71,18 @@ public:
      *  @param pin InterruptIn pin to connect to
      */
     InterruptIn(PinName pin);
+
+    /** Create an InterruptIn connected to the specified pin,
+     *  and the pin configured to the specified mode.
+     *
+     *  @param pin InterruptIn pin to connect to
+     *  @param mode Desired Pin mode configuration.
+     *  (Valid values could be PullNone, PullDown, PullUp and PullDefault.
+     *  See PinNames.h for your target for definitions)
+     *
+     */
+    InterruptIn(PinName pin, PinMode mode);
+
     virtual ~InterruptIn();
 
     /** Read the input, represented as 0 or 1 (int)
@@ -97,9 +114,10 @@ public:
      */
     template<typename T, typename M>
     MBED_DEPRECATED_SINCE("mbed-os-5.1",
-        "The rise function does not support cv-qualifiers. Replaced by "
-        "rise(callback(obj, method)).")
-    void rise(T *obj, M method) {
+                          "The rise function does not support cv-qualifiers. Replaced by "
+                          "rise(callback(obj, method)).")
+    void rise(T *obj, M method)
+    {
         core_util_critical_section_enter();
         rise(callback(obj, method));
         core_util_critical_section_exit();
@@ -121,9 +139,10 @@ public:
      */
     template<typename T, typename M>
     MBED_DEPRECATED_SINCE("mbed-os-5.1",
-        "The fall function does not support cv-qualifiers. Replaced by "
-        "fall(callback(obj, method)).")
-    void fall(T *obj, M method) {
+                          "The fall function does not support cv-qualifiers. Replaced by "
+                          "fall(callback(obj, method)).")
+    void fall(T *obj, M method)
+    {
         core_util_critical_section_enter();
         fall(callback(obj, method));
         core_util_critical_section_exit();
@@ -131,29 +150,35 @@ public:
 
     /** Set the input pin mode
      *
-     *  @param pull PullUp, PullDown, PullNone
+     *  @param pull PullUp, PullDown, PullNone, PullDefault
+     *  See PinNames.h for your target for definitions)
      */
     void mode(PinMode pull);
 
-    /** Enable IRQ. This method depends on hw implementation, might enable one
+    /** Enable IRQ. This method depends on hardware implementation, might enable one
      *  port interrupts. For further information, check gpio_irq_enable().
      */
     void enable_irq();
 
-    /** Disable IRQ. This method depends on hw implementation, might disable one
+    /** Disable IRQ. This method depends on hardware implementation, might disable one
      *  port interrupts. For further information, check gpio_irq_disable().
      */
     void disable_irq();
 
     static void _irq_handler(uint32_t id, gpio_irq_event event);
-
+#if !defined(DOXYGEN_ONLY)
 protected:
     gpio_t gpio;
     gpio_irq_t gpio_irq;
 
     Callback<void()> _rise;
     Callback<void()> _fall;
+
+    void irq_init(PinName pin);
+#endif
 };
+
+/** @}*/
 
 } // namespace mbed
 

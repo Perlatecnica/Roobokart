@@ -19,9 +19,12 @@
 
 #warning ble/services/EddystoneConfigService.h is deprecated. Please use the example in 'github.com/ARMmbed/ble-examples/tree/master/BLE_EddystoneService'.
 
-#include "mbed.h"
+#if BLE_FEATURE_GATT_SERVER
+
 #include "ble/BLE.h"
 #include "ble/services/EddystoneService.h"
+#include "Timer.h"
+#include "Ticker.h"
 
 #define UUID_URI_BEACON(FIRST, SECOND) {                         \
         0xee, 0x0c, FIRST, SECOND, 0x87, 0x86, 0x40, 0xba,       \
@@ -112,13 +115,16 @@ public:
     };
 
     /**
-     * @param[ref]    ble
+     * @param[in]    bleIn
      *                    BLEDevice object for the underlying controller.
-     * @param[in/out] paramsIn
+     * @param[in,out] paramsIn
      *                    Reference to application-visible beacon state, loaded
      *                    from persistent storage at startup.
      * @param[in]     defaultAdvPowerLevelsIn
      *                    Default power-levels array; applies only if resetToDefaultsFlag is true.
+     *
+     * @param[in]     radioPowerLevelsIn
+     *                    Transmission power-levels to use in TX.
      */
     EddystoneConfigService(BLEDevice     &bleIn,
                            Params_t      &paramsIn,
@@ -176,7 +182,7 @@ public:
      * @brief Start EddystoneConfig advertising. This function should be called
      * after the EddystoneConfig constructor and after all the frames have been added.
      *
-     * @paramsP[in]   resetToDefaultsFlag
+     * @param[in]   resetToDefaultsFlag
      *                    Applies to the state of the 'paramsIn' parameter.
      *                    If true, it indicates that paramsIn is potentially
      *                    un-initialized, and default values should be used
@@ -494,8 +500,8 @@ private:
 
     BLEDevice                                  &ble;
     Params_t                                   &params;
-    Ticker                                     timeSinceBootTick;
-    Timeout                                    switchFrame;
+    mbed::Ticker                               timeSinceBootTick;
+    mbed::Timeout                              switchFrame;
     // Default value that is restored on reset.
     PowerLevels_t                              &defaultAdvPowerLevels; // This goes into the advertising frames (radio power measured at 1m from device).
     PowerLevels_t                              &radioPowerLevels;      // This configures the power levels of the radio.
@@ -538,5 +544,7 @@ private:
     ReadWriteGattCharacteristic<uint16_t>      beaconPeriodChar;
     WriteOnlyGattCharacteristic<uint8_t>       resetChar;
 };
+
+#endif // BLE_FEATURE_GATT_SERVER
 
 #endif  // SERVICES_EDDYSTONE_BEACON_CONFIG_SERVICE_H_

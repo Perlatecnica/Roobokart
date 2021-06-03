@@ -1,8 +1,6 @@
 ;******************** (C) COPYRIGHT 2017 STMicroelectronics ********************
 ;* File Name          : startup_stm32f413xx.s
 ;* Author             : MCD Application Team
-;* Version            : V2.6.1
-;* Date               : 14-February-2017
 ;* Description        : STM32F413xx devices vector table for MDK-ARM toolchain. 
 ;*                      This module performs:
 ;*                      - Set the initial SP
@@ -39,8 +37,6 @@
 ; 
 ;*******************************************************************************
 
-__initial_sp    EQU     0x20050000 ; Top of RAM 320K
-
                 PRESERVE8
                 THUMB
 
@@ -50,8 +46,9 @@ __initial_sp    EQU     0x20050000 ; Top of RAM 320K
                 EXPORT  __Vectors
                 EXPORT  __Vectors_End
                 EXPORT  __Vectors_Size
+                IMPORT  |Image$$ARM_LIB_STACK$$ZI$$Limit|
 
-__Vectors       DCD     __initial_sp               ; Top of Stack
+__Vectors       DCD     |Image$$ARM_LIB_STACK$$ZI$$Limit| ; Top of Stack
                 DCD     Reset_Handler              ; Reset Handler
                 DCD     NMI_Handler                ; NMI Handler
                 DCD     HardFault_Handler          ; Hard Fault Handler

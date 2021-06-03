@@ -1,5 +1,6 @@
 /* mbed Microcontroller Library
- * Copyright (c) 2006-2013 ARM Limited
+ * Copyright (c) 2006-2019 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +26,14 @@
 #include "platform/NonCopyable.h"
 
 namespace mbed {
-/** \addtogroup platform */
+/** \addtogroup platform-public-api */
 /** @{*/
+/**
+ * \defgroup platform_LocalFileSystem LocalFileSystem functions
+ * @{
+ */
 
-FILEHANDLE local_file_open(const char* name, int flags);
-/** @}*/
+FILEHANDLE local_file_open(const char *name, int flags);
 
 /**
  * @class LocalFileHandle
@@ -103,7 +107,8 @@ class LocalFileSystem : public FileSystemLike, private NonCopyable<LocalFileSyst
     // No modifiable state
 
 public:
-    LocalFileSystem(const char* n) : FileSystemLike(n) {
+    LocalFileSystem(const char *n) : FileSystemLike(n)
+    {
 
     }
 
@@ -111,6 +116,10 @@ public:
     virtual int open(DirHandle **dir, const char *name);
     virtual int remove(const char *filename);
 };
+
+/**@}*/
+
+/**@}*/
 
 } // namespace mbed
 

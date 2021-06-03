@@ -1,8 +1,6 @@
-
-/** \addtogroup platform */
-/** @{*/
 /* mbed Microcontroller Library
  * Copyright (c) 2017-2017 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #ifndef MBED_APPLICATION_H
 #define MBED_APPLICATION_H
 
 #include<stdint.h>
 
-#if defined(__CORTEX_M3) || defined(__CORTEX_M4) || defined(__CORTEX_M7)
+#if defined(__CORTEX_M0PLUS) || defined(__CORTEX_M3) || defined(__CORTEX_M4) || defined(__CORTEX_M7)\
+    || defined(__CORTEX_M23) || defined(__CORTEX_A9) || defined(__CORTEX_M33)
 #define MBED_APPLICATION_SUPPORT 1
 #else
 #define MBED_APPLICATION_SUPPORT 0
@@ -52,4 +52,3 @@ void mbed_start_application(uintptr_t address);
 
 #endif
 
-/** @}*/
