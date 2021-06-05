@@ -12,9 +12,11 @@ The project ensures an educational experience for learning about robotics and th
 
 The Roobokart and the city are equipped with advanced sensors, and boards based on STMicroelectronics controllers, which, together with other instruments used, constitute a laboratory useful for experimenting with what has been learned in class form books.
 
-Students involved in the Roobopoli project, manage the design and implementation of a smart city by learning to use STMicroelectronics technologies that are actually used for this type of application. This promotes theri training and the development of real skills, bringing them closer to the world of work in a fashinatin, innovative and current context, but also fun
+Students involved in the Roobopoli project, manage the design and implementation of a smart city by learning to use STMicroelectronics technologies that are actually used for this type of application. This promotes their training and the development of real skills, bringing them closer to the world of work in a fashinating, innovative and current context, but also fun.
 
-**We recommend that you visit our website www.roobopoli.org for additional information on how to compile the project**
+**We recommend that you visit our website www.roobopoli.org for additional information on how to compile the project, and have a look to FAQ section**
+
+http://www.roobopoli.org/en_GB/category/faq/
 
 ---
 
