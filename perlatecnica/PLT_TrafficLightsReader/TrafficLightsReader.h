@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2017 perlatecnica.it, MIT License
+/* Copyright (c) 2022 perlatecnica.it, MIT License
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
 * and associated documentation files (the "Software"), to deal in the Software without
@@ -16,30 +16,41 @@
 * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef TOF_SHIELD53L0A1_H
-#define TOF_SHIELD53L0A1_H
+/*@author: Francesco Caiazzo */
 
-#include "XNucleo53L0A1.h"
+#ifndef PLT_TRAFFIC_LIGHTS_READER_H
+#define PLT_TRAFFIC_LIGHTS_READER_H
 
-class ToF53L0A1 {
+#include <mbed.h>
+#include "roobokart/roobokart_def.h"
+#include "perlatecnica/PLT_TCS3200/TCS3200.h"
 
+class TrafficLightsReader
+{
 public:
-	ToF53L0A1() = delete;
-	ToF53L0A1(DevI2C *dev_i2c);
-	void display_refresh(VL53L0X_RangingMeasurementData_t sensor_range_data);
-	XNucleo53L0A1 *board;
-	void display(int value);
-	void display(char *value);
-	uint16_t getLeftMeasure();
-	uint16_t getRightMeasure();
-
+  enum TLR_Info { RED, GREEN, YELLOW, BLACK };
 
 private:
-	DevI2C *device_i2c;
-	VL53L0X_RangingMeasurementData_t data_sensor_left;
-	VL53L0X_RangingMeasurementData_t data_sensor_right;
-	int status;
-	OperatingMode operating_mode;// = range_single_shot_polling;
-};
-#endif
+  TCS3200 color;
+  long clear;
+  float red;
+  float green;
+  float blue;
 
+public:    
+  TrafficLightsReader();  
+  TLR_Info read();
+
+  inline void start() { color.SetMode(TCS3200::SCALE_2); }
+  inline void stop() { color.SetMode(TCS3200::POWERDOWN); }
+
+  inline const float & getRed() const { return red; }
+  inline const float & getGreen() const { return green; }
+  inline const float & getBlue() const { return blue; }
+
+private:
+  void readColors();
+  float safeDiv(long val1, long val2);
+};
+
+#endif

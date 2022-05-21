@@ -74,8 +74,9 @@ int RoadSignAlignMode::runMode(void)
 #endif
 		printf("status %d\r\n", status);
 
-		speed = currPlanning->getSpeed();
-		speed = 0.8*speed;
+		//speed = currPlanning->getSpeed();
+		//speed = 0.8*speed;
+		speed = CRUISE_RSA_SPEED;
 
 		switch(status){
 			case NOT_ALIGNED_STATUS:
@@ -93,10 +94,9 @@ int RoadSignAlignMode::runMode(void)
 
 				if((RIGHT_IR_BLACK) && (LEFT_IR_BLACK) ){
 					// It calibrates the MEMS sensors
-					currDevices->mems->calibrateLSM6DSL(50);
-					// It stores the current yaw as setpoint
-					currDevices->mems->compute();
-					setPointYaw = currDevices->mems->attitude.yaw;
+					currDevices->mems->waitForYawStab(5000,100,0.1f);
+					currDevices->mems->setYawOffset();
+					setPointYaw = currDevices->mems->getYaw();
 					currPlanning->setSetPointYaw(setPointYaw);
 					wait_ms(300);
 					status = READ_CODE_STATUS;
@@ -105,10 +105,10 @@ int RoadSignAlignMode::runMode(void)
 
 
 			case READ_CODE_STATUS:
-				currDevices->mems->compute();
-				yaw = currDevices->mems->attitude.yaw;
+				yaw = currDevices->mems->getYaw();
 				det = (double)pidtimer_RS.read();
-				direction_RS = (int8_t)(dirPID_RS->evaluate(det,setPointYaw,yaw));
+				//direction_RS = (int8_t)(dirPID_RS->evaluate(det,setPointYaw,yaw));
+				direction_RS = (int8_t)(currDevices->mems->getYaw()*RSA_KP);
 				pidtimer_RS.reset();
 				currDevices->currMotors.turn(-direction_RS, speed, MOTOR_LEFT , MOTOR_RIGHT);
 
@@ -138,9 +138,7 @@ int RoadSignAlignMode::runMode(void)
 
 			case PREPARE_NEXT_STATUS:
 				currentmode = nextmode;
-				//currDevices->currMotors.stop();
-				// Switch ON the sensor of color
-				currDevices->color->SetMode(TCS3200::SCALE_20);
+
 				// It informs the planning about the read value of cross road. Planning is in charge of choosing the next direction
 				currPlanning->setCrossCodeRead(roadsignvalue);
 				break;

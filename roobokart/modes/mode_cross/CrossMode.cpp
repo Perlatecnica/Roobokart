@@ -62,8 +62,7 @@ int CrossMode::runMode(void)
 
 			if(crosstimer.read() < 2){
 				// It gather the current yaw
-				currDevices->mems->compute();
-				currentYaw = currDevices->mems->attitude.yaw;
+				currentYaw = currDevices->mems->getYaw(); // range [-180,+180]
 				// PID evaluation of direction. The yaw setpoint is followed
 				det = (double)pidtimer.read();
 				direction = (int8_t)(dirPID->evaluate(det,setPointYaw,currentYaw));

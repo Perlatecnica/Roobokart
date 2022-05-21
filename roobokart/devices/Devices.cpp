@@ -15,7 +15,7 @@
 
 #include "../../roobokart/devices/Devices.h"
 
-Devices::Devices(Serial* ser){
+Devices::Devices(Serial* ser) {
 	ser->printf("\r\n\tROOBOKART v2.1.0\r\n");
 
 	// IR sensors instances
@@ -27,19 +27,23 @@ Devices::Devices(Serial* ser){
 	usrButton = new DigitalIn(USER_BUTTON);
 
 	// Color sensor instance
-	color = new TCS3200(TCS3200_S0, TCS3200_S1, TCS3200_S2, TCS3200_S3, TCS3200_OUT);
+	trafficLightReader = new TrafficLightsReader();
+
+	// I2C Port
+	device_i2c = new DevI2C(I2C_SDA, I2C_SCL);
 
 	// Proximity sensors instance
-	tof = new ToF53L0A1();
+	tof = new ToF53L0A1(device_i2c);
 
 	// MEMS sensors instance
-	mems = new MEMS_IKS01A2();
-	mems->init(IKS01A2_I2C_SDA, IKS01A2_I2C_SCL, IKS01A2_INT1, IKS01A2_INT2);
-	mems->setODR(155);
+	mems = new Gyro(device_i2c);
+
 	Buzzer = new PwmOut(BUZZER_PIN);
 
 	// Bluetooth HC05 Connection
 	BT_hc05 = new Serial(BT_TX,BT_RX);
+
+	device_i2c->frequency(1000000);
 }
 
 
@@ -53,26 +57,6 @@ void Devices::setSPDirection(float spd){
 
 float Devices::getSPDirection(){
 	return setPointDirection;
-}
-
-void Devices::setRedThreshold(int redt){
-	float temp = redt*20;
-	temp = temp / 100;
-	redthreshold = redt + temp;
-}
-
-int Devices::getRedThreshold(){
-	return redthreshold;
-}
-
-void Devices::setGreenThreshold(int greent){
-	float temp = greent*10;//20;
-	temp = temp / 100;
-	greenthreshold = greent + temp;
-}
-
-int Devices::getGreenThreshold(){
-	return greenthreshold;
 }
 
 void Devices::buzz(int period_us, float dutycycle, int time){

@@ -21,9 +21,9 @@
 #include "../../roobokart/roobokart_def.h"
 #include "VL53L0X.h"
 
-ToF53L0A1::ToF53L0A1(){
+ToF53L0A1::ToF53L0A1(DevI2C *dev_i2c) : device_i2c(dev_i2c) {
 	/* It creates*/
-	device_i2c = new DevI2C(I2C_SDA, I2C_SCL);
+	//device_i2c = new DevI2C(I2C_SDA, I2C_SCL);
 
 	/* creates the 53L0A1 expansion board singleton obj */
 	board = XNucleo53L0A1::instance(device_i2c, NC, NC, NC); // NC connected interrupt pin
@@ -51,7 +51,9 @@ uint16_t ToF53L0A1::getLeftMeasure(){
 #ifdef DEBUG_PROXIMITY
 	printf("Proximity sensor left %d\r\n",data_sensor_left.RangeMilliMeter);
 #endif
-	return data_sensor_left.RangeMilliMeter;
+	if (data_sensor_left.RangeMilliMeter)
+		return data_sensor_left.RangeMilliMeter;
+	return 8190;
 }
 
 uint16_t ToF53L0A1::getRightMeasure(){
@@ -59,7 +61,9 @@ uint16_t ToF53L0A1::getRightMeasure(){
 #ifdef DEBUG_PROXIMITY
 	printf("Proximity sensor right %d\r\n",data_sensor_right.RangeMilliMeter);
 #endif
-	return data_sensor_right.RangeMilliMeter;
+	if (data_sensor_right.RangeMilliMeter)
+			return data_sensor_right.RangeMilliMeter;
+		return 8190;
 }
 
 /* On board 4 digit local display refresh */

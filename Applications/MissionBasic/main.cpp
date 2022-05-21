@@ -14,7 +14,6 @@
  */
 
 #include "mbed.h"
-
 #ifdef ROOBOKART_BASIC_MISSION
 
 #include "roobokart/devices/Devices.h"
@@ -54,6 +53,7 @@ int main() {
 
 	currentmode = planning.SetCurrentMode(RESET_MODE);
 
+	devices.tof->display("----");
 
 	while(true) {
 

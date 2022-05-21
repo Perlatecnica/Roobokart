@@ -37,7 +37,7 @@
                             							
                             <targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.1327233907.572959745" name=""/>
                             							
-                            <builder arguments="compile -t gcc_arm -m NUCLEO_F401RE --app-config .\Applications\MissionBasic\mbed_app.json" command="mbed" enableCleanBuild="false" id="org.eclipse.cdt.build.core.settings.default.builder.1187953616" incrementalBuildTarget="" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+                            <builder arguments="compile -t gcc_arm -m NUCLEO_F401RE -f -D ROOBOKART_BASIC_MISSION" command="mbed" enableCleanBuild="false" id="org.eclipse.cdt.build.core.settings.default.builder.1187953616" incrementalBuildTarget="" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
                             							
                             <tool id="org.eclipse.cdt.build.core.settings.holder.libs.1196219313" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
                             							
@@ -97,7 +97,7 @@
             			
             <storageModule moduleId="cdtBuildSystem" version="4.0.0">
                 				
-                <configuration buildProperties="" description="Remote control by Android App" id="0.1316994146.190260559" name="RemoteControlBasic" parent="org.eclipse.cdt.build.core.prefbase.cfg">
+                <configuration artifactName="${ProjName}" buildProperties="" description="Remote control by Android App" id="0.1316994146.190260559" name="RemoteControlBasic" parent="org.eclipse.cdt.build.core.prefbase.cfg">
                     					
                     <folderInfo id="0.1316994146.190260559." name="/" resourcePath="">
                         						
@@ -105,7 +105,7 @@
                             							
                             <targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.451120530.1320866272" name=""/>
                             							
-                            <builder arguments="compile -t gcc_arm -m NUCLEO_F401RE --app-config .\Applications\RemoteControl_BasicApp\mbed_app.json" command="mbed" enableCleanBuild="false" id="org.eclipse.cdt.build.core.settings.default.builder.21432396" incrementalBuildTarget="" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+                            <builder arguments="compile -t gcc_arm -m NUCLEO_F401RE -D ROOBOKART_REMOTE_CONTROL_BASICAPP" command="mbed" enableCleanBuild="false" id="org.eclipse.cdt.build.core.settings.default.builder.21432396" incrementalBuildTarget="" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
                             							
                             <tool id="org.eclipse.cdt.build.core.settings.holder.libs.1187269971" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
                             							

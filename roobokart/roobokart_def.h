@@ -31,30 +31,35 @@
 #ifdef ROOBOKART_MASTER
 #define IR_THRESHOLD 0.8
 #define ROADSIGN_DETECTION_THRESHOLD_DEFAULT 0.5
-#define RED_THRESHOLD_DEFAULT 160
-#define GREEN_THRESHOLD_DEFAULT 310
+#define COLOR_THRESHOLD 0.3f
 #define BRAKING_FORCE_DEFAULT -10
 #define NAV_KP 64
 #define NAV_KI 50
 #define NAV_KD 1
-#define MAX_NAV_SPEED 100
-#define CRUISE_NAV_SPEED 50
-#define MIN_NAV_SPEED 20
+#define RSA_KP 1.2f				// road sign align gyro kp
+#define    MAX_NAV_SPEED 100	// navigation mode max speed
+#define    MIN_NAV_SPEED 20		// navigation mode min speed
+#define CRUISE_NAV_SPEED 45		// navigation mode cruise speed
+#define CRUISE_RSA_SPEED 40		// road sign align mode cruise speed
+#define    SEEK_TL_SPEED 35		// traffic light seek speed
+#define  ESCAPE_TL_SPEED 40		// traffic light escape speed
 #endif
 
 
 #ifdef ROOBOKART_A
 #define IR_THRESHOLD 0.8
 #define ROADSIGN_DETECTION_THRESHOLD_DEFAULT 0.2 /**/
-#define RED_THRESHOLD_DEFAULT 160
-#define GREEN_THRESHOLD_DEFAULT 310
+#define COLOR_THRESHOLD 0.3f
 #define BRAKING_FORCE_DEFAULT -10
 #define NAV_KP 64
 #define NAV_KI 50
 #define NAV_KD 1
-#define MAX_NAV_SPEED 100
-#define CRUISE_NAV_SPEED 35 /**/
-#define MIN_NAV_SPEED 20
+#define RSA_KP 1.2f				// road sign align gyro kp
+#define MAX_NAV_SPEED 100		// navigation mode max speed
+#define MIN_NAV_SPEED 20		// navigation mode min speed
+#define CRUISE_NAV_SPEED 35 	// navigation mode cruise speed
+#define    SEEK_TL_SPEED 30		// traffic light seek speed
+#define  ESCAPE_TL_SPEED 35		// traffic light escape speed
 #endif
 
 

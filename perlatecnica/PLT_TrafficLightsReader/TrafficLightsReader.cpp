@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2017 perlatecnica.it, MIT License
+/* Copyright (c) 2022 perlatecnica.it, MIT License
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
 * and associated documentation files (the "Software"), to deal in the Software without
@@ -16,30 +16,50 @@
 * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef TOF_SHIELD53L0A1_H
-#define TOF_SHIELD53L0A1_H
+/*@author: Francesco Caiazzo */
 
-#include "XNucleo53L0A1.h"
+#include "TrafficLightsReader.h"
 
-class ToF53L0A1 {
+TrafficLightsReader::TrafficLightsReader()
+: color(TCS3200_S0, TCS3200_S1, TCS3200_S2, TCS3200_S3, TCS3200_OUT) {}
 
-public:
-	ToF53L0A1() = delete;
-	ToF53L0A1(DevI2C *dev_i2c);
-	void display_refresh(VL53L0X_RangingMeasurementData_t sensor_range_data);
-	XNucleo53L0A1 *board;
-	void display(int value);
-	void display(char *value);
-	uint16_t getLeftMeasure();
-	uint16_t getRightMeasure();
+TrafficLightsReader::TLR_Info TrafficLightsReader::read()
+{
+  readColors(); 
+    
+  if (abs(red - green) > COLOR_THRESHOLD)
+  {
+    if ((red > green) && (red > blue))
+    {
+      return RED;
+    }
+    else if ((green > blue) && (green > red))
+    {
+      return GREEN;
+    }
+    else
+    {
+      return BLACK;
+    }
+  } 
+  else 
+  {
+    if ((red - blue) > COLOR_THRESHOLD) return YELLOW;
+    else return BLACK;
+  }
+}
 
+void TrafficLightsReader::readColors()
+{
+  clear = color.ReadClear();
+  red = safeDiv(clear, color.ReadRed());
+  green = safeDiv(clear, color.ReadGreen());
+  blue = safeDiv(clear, color.ReadBlue());
+  printf("%6.4f %6.4f %6.4f\r\n", red, green, blue);
+}
 
-private:
-	DevI2C *device_i2c;
-	VL53L0X_RangingMeasurementData_t data_sensor_left;
-	VL53L0X_RangingMeasurementData_t data_sensor_right;
-	int status;
-	OperatingMode operating_mode;// = range_single_shot_polling;
-};
-#endif
-
+float TrafficLightsReader::safeDiv(long val1, long val2)
+{
+  if (val2 == 0) return 0.0f;
+  return (float) val1 / val2;
+}

@@ -45,25 +45,16 @@ int PostMode::runMode(void)
 	while( currDevices->usrButton->read() != 0 ){;}
 	calSPDirection();
 
-	/* Evaluating trafficlight colors thresholds*/
-	currDevices->color->SetMode(TCS3200::SCALE_20);
-
-	// Evaluating RED value
-	wait_ms(500);
-	int red = RED_THRESHOLD_DEFAULT;
-	currDevices->setRedThreshold(red);
-	printf("RED value: %d!\r\n",red);
-	printf("RED Threshold: %d!\r\n",currDevices->getRedThreshold());
-
-	// Evaluating GREEN value
-	wait_ms(500);
-	int green = GREEN_THRESHOLD_DEFAULT;
-	currDevices->setGreenThreshold(green);
-	printf("GREEN value: %d!\r\n",green);
-	printf("GREEN Threshold: %d!\r\n",currDevices->getGreenThreshold());
+	/* Evaluating trafficlight colors */
+	currDevices->trafficLightReader->start();
+	currDevices->trafficLightReader->read();
+	printf("Colors Threshold: %f\r\n", COLOR_THRESHOLD);
+	printf("  RED: %f\r\n", currDevices->trafficLightReader->getRed());
+	printf("GREEN: %f\r\n", currDevices->trafficLightReader->getGreen());
+	printf(" BLUE: %f\r\n", currDevices->trafficLightReader->getBlue());
 
 	wait_ms(300);
-	currDevices->color->SetMode(TCS3200::POWERDOWN);
+	currDevices->trafficLightReader->stop();
 
 	currDevices->tof->display("go");
 	while( currDevices->usrButton->read() != 0 ){;}

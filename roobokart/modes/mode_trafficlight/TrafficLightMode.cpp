@@ -31,55 +31,48 @@ int TrafficLightMode::runMode(void)
 	printf("TrafficLight Mode: It works!\r\n");
 #endif
 
-	int red = -1;
-	int green = -1;
-
-	int redthreshold = currDevices->getRedThreshold();
-	int greenthreshold = currDevices->getGreenThreshold();
-
 	currentmode = mymode;
 	nextmode = currPlanning->SetCurrentMode(currentmode);
 	currDevices->tof->display(currentmode);
 
-	while(currentmode == mymode){
-		red = currDevices->color->ReadRed();
-		green = currDevices->color->ReadGreen();
+	currDevices->trafficLightReader->start();
+
+	while(currentmode == mymode)
+	{
 
 #ifdef DEBUG_TRAFFICLIGHT_MODE
 
-		while(true) {
-			red = currDevices->color->ReadRed();
-			printf("Red: %d\r\n",red);
-
-			green = currDevices->color->ReadGreen();
-			printf("Green: %d\r\n",green);
+		while(true)
+		{
+			currDevices->trafficLightReader->read()
+			printf("  RED: %f\r\n", currDevices->trafficLightReader->getRed());
+			printf("GREEN: %f\r\n", currDevices->trafficLightReader->getGreen());
 			printf("\r\n");
-
 			wait(1);
 		}
-		//printf("%d %d\r\n",red, green);
 #endif
 
-		if((red < redthreshold) && (red < green)){//200
 
-#ifdef DEBUG_TRAFFICLIGHT_MODE
-		printf("STEP A\r\n");
-#endif
 
-			currDevices->currMotors.run(0, BRAKING_FORCE_DEFAULT, MOTOR_LEFT , MOTOR_RIGHT);
-		} else if((green < greenthreshold) && (red > green)){
-
-#ifdef DEBUG_TRAFFICLIGHT_MODE
-		printf("STEP B\r\n");
-#endif
-
-			currentmode = nextmode;
-			currDevices->color->SetMode(TCS3200::POWERDOWN);
-
-			//vado un po avanti per superare il semaforo
-			currDevices->currMotors.run(0, 35, MOTOR_LEFT , MOTOR_RIGHT);
-			wait_ms(500);
+		switch (currDevices->trafficLightReader->read())
+		{
+		  case TrafficLightsReader::BLACK:
+			currDevices->currMotors.run(0, SEEK_TL_SPEED, MOTOR_LEFT, MOTOR_RIGHT);
 			break;
+
+		  case TrafficLightsReader::GREEN:
+			currentmode = nextmode;
+			currDevices->trafficLightReader->stop();
+			// robot goes a little further to pass the traffic light
+			currDevices->currMotors.run(0, ESCAPE_TL_SPEED, MOTOR_LEFT, MOTOR_RIGHT);
+			//wait_ms(500);
+			printf("end -------------\r\n");
+			wait_ms(1000);
+			break;
+
+		  default:
+			  currDevices->currMotors.stop();
+			  break;
 		}
 	}
 

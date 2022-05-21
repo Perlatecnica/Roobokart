@@ -16,8 +16,9 @@
 #ifndef DEVICES_H
 #define DEVICES_H
 
+#include "../../perlatecnica/PLT_MEMS_IKS01A2/Gyro.h"
 #include "../roobokart_def.h"
-#include "TCS3200.h"
+#include "TrafficLightsReader.h"
 #include "STSpin240_250.h"
 #include "HTS221Sensor.h"
 #include "LPS22HBSensor.h"
@@ -25,7 +26,6 @@
 #include "MotorShieldIHM12A1.h"
 #include "ToF53L0A1.h"
 #include "PID.h"
-#include "MEMS_IKS01A2.h"
 
 
 
@@ -35,11 +35,11 @@ public:
     Devices(Serial* ser);
     MotorShieldIHM12A1 currMotors;
 
-    //Create a TCS3200 object S0    S1    S2     S3     OUT
-    TCS3200 *color;
+    TrafficLightsReader *trafficLightReader;
 
+    DevI2C * device_i2c;
     ToF53L0A1 *tof;
-    MEMS_IKS01A2 *mems;
+    Gyro *mems;
 
     AnalogIn *rfrontIR;
     AnalogIn *lfrontIR;
@@ -53,10 +53,7 @@ public:
 
     void setSPDirection(float spd);
     float getSPDirection(void);
-    void setRedThreshold(int redt);
-    int getRedThreshold();
-    int getGreenThreshold();
-    void setGreenThreshold(int greent);
+
     void buzz(int period_us, float dutycycle, int time);
 
 private:

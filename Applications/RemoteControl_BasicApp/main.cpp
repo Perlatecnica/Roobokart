@@ -17,7 +17,6 @@
 
 #ifdef ROOBOKART_REMOTE_CONTROL_BASICAPP
 
-#include "mbed.h"
 #include "Devices.h"
 
 //Serial connection to PC
@@ -30,8 +29,6 @@ int main() {
 
 	pc.printf("\r\n\r\n");
 	pc.printf("\r\n\tREMOTE CONTROL BASIC APP v1.0.0\r\n");
-
-
 
 	int speed = 100;
 	while(true) {
