@@ -48,8 +48,12 @@ ObstaclesMode obstmode(&pc,&devices, OBSTACLES_MANAGEMENT_MODE, &planning);
 int main() {
 	//It changes baudrate
 	pc.baud(9600);
+
 	pc.printf("\r\n\r\n");
 	pc.printf("\r\n\tBASIC MISSION v1.0.0\r\n");
+	pc.printf("mbed-os-rev: %d.%d.%d\r\n", MBED_MAJOR_VERSION, MBED_MINOR_VERSION, MBED_PATCH_VERSION);
+
+
 
 	currentmode = planning.SetCurrentMode(RESET_MODE);
 
@@ -62,6 +66,7 @@ int main() {
 		// The measurements of both the sensors will print on serial com
 		devices.tof->getLeftMeasure();
 		devices.tof->getRightMeasure();
+		devices.tof->getCentreMeasure();
 		wait_ms(300);
 #endif
 

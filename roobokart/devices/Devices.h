@@ -38,16 +38,66 @@ public:
     TrafficLightsReader *trafficLightReader;
 
     DevI2C * device_i2c;
+
+#ifdef ROOBOKART_V3
+    DevI2C * device_i2c3;
+#endif
+
     ToF53L0A1 *tof;
     Gyro *mems;
 
+
+private:
+    float maxValueIR = 0;
+    float minValueIR = 0;
+#ifdef ROOBOKART_V3
+    AnalogIn *rfrontIR_0;
+    AnalogIn *rfrontIR_1;
+    AnalogIn *rfrontIR_2;
+#endif
     AnalogIn *rfrontIR;
     AnalogIn *lfrontIR;
     AnalogIn *cfrontIR;
 
+    float readIR(AnalogIn*ir, bool raw = false)
+    {
+    	if (raw) return ir->read();
+    	return map(ir->read(),minValueIR, maxValueIR, 0.0f, 1.0f);
+    }
+
+public:
+
+
+    inline void setMaxIR(float value) {	maxValueIR = value; }
+    inline void setMinIR(float value) {	minValueIR = value; }
+
+    inline float readLeftIR(bool raw = false)
+    {
+    	return map(lfrontIR->read(),IR_L_MIN_VALUE, IR_L_MAX_VALUE, 0.0f, 1.0f);
+    }
+
+    inline float readCentreIR(bool raw = false)
+    {
+    	return map(cfrontIR->read(),IR_C_MIN_VALUE, IR_C_MAX_VALUE, 0.0f, 1.0f);
+    }
+
+    inline float readRightIR(bool raw = false)
+    {
+    	return map(rfrontIR->read(),IR_R_MIN_VALUE, IR_R_MAX_VALUE, 0.0f, 1.0f);
+    }
+
     DigitalIn *usrButton;
 
     Serial *BT_hc05;
+
+    static float map(float x, float in_min, float in_max, float out_min, float out_max)
+	{
+    	float value;
+		value = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+		if (value > out_max) return out_max;
+		if (value < out_min) return out_min;
+		return value;
+	}
 
     bool roadsignDetected(float cfrontIRvalue);
 
@@ -56,6 +106,7 @@ public:
 
     void buzz(int period_us, float dutycycle, int time);
 
+
 private:
     float setPointDirection;
     int redthreshold;
@@ -63,6 +114,7 @@ private:
     // Onboard buzzer
     PwmOut *Buzzer;
 };
+
 
 #endif
 

@@ -20,46 +20,58 @@
 
 #include "TrafficLightsReader.h"
 
+#if defined(ROOBOKART_V1)
 TrafficLightsReader::TrafficLightsReader()
-: color(TCS3200_S0, TCS3200_S1, TCS3200_S2, TCS3200_S3, TCS3200_OUT) {}
+: color(TCS3200_S0, TCS3200_S1, TCS3200_S2, TCS3200_S3, TCS3200_OUT), threshold(COLOR_THRESHOLD)
+{
+    color.SetMode(TCS3200::SCALE_2);
+    color.Stop();
+}
+#elif defined(ROOBOKART_V3)
+TrafficLightsReader::TrafficLightsReader(DevI2C * dev)
+: color(dev), threshold(COLOR_THRESHOLD)
+{
+	#if defined(ROOBOKART_V1)
+    color.Stop();
+	#endif
+    color.init();
+}
+#endif
 
 TrafficLightsReader::TLR_Info TrafficLightsReader::read()
 {
-  readColors(); 
-    
-  if (abs(red - green) > COLOR_THRESHOLD)
-  {
-    if ((red > green) && (red > blue))
+    readColors();
+
+    if (abs(red - green) > threshold)
     {
-      return RED;
-    }
-    else if ((green > blue) && (green > red))
-    {
-      return GREEN;
+        if ((red > green) && (red > blue)) return RED;
+        else if ((green > blue) && (green > red)) return GREEN;
     }
     else
     {
-      return BLACK;
+        if ((red - blue) > threshold) return YELLOW;
     }
-  } 
-  else 
-  {
-    if ((red - blue) > COLOR_THRESHOLD) return YELLOW;
-    else return BLACK;
-  }
+    return BLACK;
 }
 
 void TrafficLightsReader::readColors()
 {
-  clear = color.ReadClear();
-  red = safeDiv(clear, color.ReadRed());
-  green = safeDiv(clear, color.ReadGreen());
-  blue = safeDiv(clear, color.ReadBlue());
-  printf("%6.4f %6.4f %6.4f\r\n", red, green, blue);
+    #if defined(ROOBOKART_V1)
+    clear = color.ReadClear();
+    green = safeDiv(clear, color.ReadGreen());
+    blue = safeDiv(clear, color.ReadBlue());
+    red = safeDiv(clear, color.ReadRed());
+    #elif defined(ROOBOKART_V3)
+    color.updateValues();
+    clear = color.getVisible();
+    green = safeDiv(color.getGreen(),clear);
+    blue = safeDiv(color.getBlue(),clear);
+    red = safeDiv(color.getRed(),clear);
+    #endif
 }
 
 float TrafficLightsReader::safeDiv(long val1, long val2)
 {
-  if (val2 == 0) return 0.0f;
-  return (float) val1 / val2;
+    if (val2 == 0) return 0.0f;
+    return (float) val1 / val2;
 }

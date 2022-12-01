@@ -45,16 +45,44 @@ int PostMode::runMode(void)
 	while( currDevices->usrButton->read() != 0 ){;}
 	calSPDirection();
 
+	bool ir_raw = false;
+	do
+	{
+		printf("IR: %0.4f, %0.4f, %0.4f\r\n",
+				currDevices->readLeftIR(ir_raw),
+				currDevices->readCentreIR(ir_raw),
+				currDevices->readRightIR(ir_raw));
+	}while (false);
+
 	/* Evaluating trafficlight colors */
 	currDevices->trafficLightReader->start();
-	currDevices->trafficLightReader->read();
-	printf("Colors Threshold: %f\r\n", COLOR_THRESHOLD);
-	printf("  RED: %f\r\n", currDevices->trafficLightReader->getRed());
-	printf("GREEN: %f\r\n", currDevices->trafficLightReader->getGreen());
-	printf(" BLUE: %f\r\n", currDevices->trafficLightReader->getBlue());
+
+	do
+	{
+		currDevices->trafficLightReader->read();
+		printf("Colors Threshold: %f\r\n", COLOR_THRESHOLD);
+		printf("  RED: %f\r\n", currDevices->trafficLightReader->getRed());
+		printf("GREEN: %f\r\n", currDevices->trafficLightReader->getGreen());
+		printf(" BLUE: %f\r\n", currDevices->trafficLightReader->getBlue());
+		wait_ms(1000);
+	}
+	while (false);
+
+	currDevices->trafficLightReader->stop();
 
 	wait_ms(300);
-	currDevices->trafficLightReader->stop();
+	/* Evaluating TOF */
+	for (int i=0;i<10;i++)
+	{
+		currDevices->tof->getCentreMeasure();
+		currDevices->tof->getLeftMeasure();
+		currDevices->tof->getRightMeasure();
+		wait_ms(100);
+	}
+	printf("Centre dist: %u\r\n", currDevices->tof->getCentreMeasure());
+	printf("  Left dist: %u\r\n", currDevices->tof->getLeftMeasure());
+	printf(" Right dist: %u\r\n", currDevices->tof->getRightMeasure());
+
 
 	currDevices->tof->display("go");
 	while( currDevices->usrButton->read() != 0 ){;}
@@ -66,21 +94,42 @@ int PostMode::runMode(void)
 	return currentmode;
 }
 
+void set_min(float & var, const float & value)
+{
+	if (var>value) var = value;
+}
+
+void set_max(float & var, const float & value)
+{
+	if (var<value) var = value;
+}
 
 int PostMode::calSPDirection(){
 
 	int errcode = 0;
-	float rfrontIR;
-	float lfrontIR;
+	float min;
+	float max;
 
 	float spd;
 
-	rfrontIR = currDevices->rfrontIR->read();
-	lfrontIR = currDevices->lfrontIR->read();
+	min = currDevices->readRightIR(true); // rfrontIR->read();
+	max = currDevices->readLeftIR(true);  // lfrontIR->read();
 
-	//spd = lfrontIR - rfrontIR;
-	spd = (rfrontIR + lfrontIR)/2 - ((rfrontIR + lfrontIR)*15/100); // spd is the average of the dx and sx reading - 30%
+	for (int i = 0; i<10; i++ )
+	{
+		set_min(min, currDevices->readRightIR(true));
+		set_max(max, currDevices->readLeftIR(true));
+		wait_ms(10);
+	}
+
+	//spd = (min + max)/2 - ((min + max)*15/100); // spd is the average of the dx and sx reading - 30%
+	spd = LINE_FOLLOWER_SP;
+
+	currDevices->setMaxIR(max);
+	printf("MaxIR: %f\r\n",max);
+	currDevices->setMinIR(min);
+	printf("MinIR: %f\r\n",min);
 	currDevices->setSPDirection(spd);
-	wait(1);
+	printf("SPDIR: %f\r\n",spd);
 	return errcode;
 }

@@ -35,6 +35,8 @@ public:
     void setSetPointYaw(float spy);
     float getSetPointYaw();
 
+
+
 private:
     Devices* currDevices;
     uint32_t currcoderead;

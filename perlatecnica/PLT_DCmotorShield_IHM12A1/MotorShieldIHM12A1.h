@@ -34,10 +34,13 @@ public:
     void run(int8_t direction, int8_t velocity, unsigned int lMotor, unsigned int rMotor);
     void follow(int8_t direction, int8_t velocity, unsigned int lMotor, unsigned int rMotor);
     void turn(int8_t direction, int8_t velocity, unsigned int lMotor, unsigned int rMotor);
-
+    void tank(float direction, float velocity, unsigned int lMotor, unsigned int rMotor);
+    void car(float direction, float velocity, unsigned int lMotor, unsigned int rMotor);
 
 private:   
     void saturate(int8_t *value);
+    void saturate(float & value);
+    void excess(float & value, float & out);
 };
 #endif
 

@@ -68,50 +68,60 @@ int XNucleo53L0A1::init_board()
 {
     int status, n_dev = 0;
 
-    sensor_centre->VL53L0X_off();
-    sensor_left->VL53L0X_off();
-    sensor_right->VL53L0X_off();
+    if (sensor_centre) sensor_centre->VL53L0X_off();
+    if (sensor_left) sensor_left->VL53L0X_off();
+    if (sensor_right) sensor_right->VL53L0X_off();
 
-    status = sensor_centre->init_sensor(NEW_SENSOR_CENTRE_ADDRESS);
-    if (status) {
-	
-        delete sensor_centre;
-        delete xshutdown_centre;
-        sensor_centre = NULL;
-        xshutdown_centre = NULL;
-        printf("Sensor centre not present\n\r");
-	
-    } else {
-	
-        printf("Sensor centre present\n\r");
-        n_dev++;
-    }
-    status = sensor_left->init_sensor(NEW_SENSOR_LEFT_ADDRESS);
-    if (status) {
-        delete sensor_left;
-        delete xshutdown_left;
-        sensor_left = NULL;
-        xshutdown_left = NULL;
-        printf("Sensor left not present\n\r");
-    } else {
-        printf("Sensor left present\n\r");
-        n_dev++;
+    if (sensor_centre)
+    {
+		status = sensor_centre->init_sensor(NEW_SENSOR_CENTRE_ADDRESS);
+		if (status) {
 
+			delete sensor_centre;
+			delete xshutdown_centre;
+			sensor_centre = NULL;
+			xshutdown_centre = NULL;
+			printf("Sensor centre not present\n\r");
+
+		} else {
+
+			printf("Sensor centre present\n\r");
+			n_dev++;
+		}
     }
 
-    status = sensor_right->init_sensor(NEW_SENSOR_RIGHT_ADDRESS);
+    if (sensor_left)
+    {
+		status = sensor_left->init_sensor(NEW_SENSOR_LEFT_ADDRESS);
+		if (status) {
+			delete sensor_left;
+			delete xshutdown_left;
+			sensor_left = NULL;
+			xshutdown_left = NULL;
+			printf("Sensor left not present\n\r");
+		} else {
+			printf("Sensor left present\n\r");
+			n_dev++;
 
-    if (status) {
-        delete sensor_right;
-        delete xshutdown_right;
-        sensor_right = NULL;
-        xshutdown_right = NULL;
-        printf("Sensor right not present\n\r");
-	
-    } else {
-        printf("Sensor right present\n\r");
-        n_dev++;
+		}
     }
+
+    if (sensor_right)
+    {
+		status = sensor_right->init_sensor(NEW_SENSOR_RIGHT_ADDRESS);
+		if (status) {
+			delete sensor_right;
+			delete xshutdown_right;
+			sensor_right = NULL;
+			xshutdown_right = NULL;
+			printf("Sensor right not present\n\r");
+
+		} else {
+			printf("Sensor right present\n\r");
+			n_dev++;
+		}
+    }
+
 
     if (n_dev == 0) {
         return 1;

@@ -37,9 +37,10 @@ int NavModeStop::runMode(void)
 	while(currentmode == mymode){
 
 		// Reading IRs value
-		rfrontIR = currDevices->rfrontIR->read();
-		lfrontIR = currDevices->lfrontIR->read();
-		cfrontIR = currDevices->cfrontIR->read();
+		rfrontIR = currDevices->readRightIR(); // rfrontIR->read();
+		lfrontIR = currDevices->readLeftIR();  // lfrontIR->read();
+		cfrontIR = currDevices->readCentreIR(); // cfrontIR->read();
+
 
 		targetdirection = lfrontIR - rfrontIR;
 

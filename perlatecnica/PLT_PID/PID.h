@@ -27,21 +27,21 @@ class PID
         // Kd -  derivative gain
         // max - maximum value of manipulated variable
         // min - minimum value of manipulated variable
-        PID(  double max, double min, double Kp, double Kd, double Ki );
+        PID(  float max, float min, float Kp, float Kd, float Ki );
 
         // Returns the manipulated variable given a setpoint and current process value
         // dt -  loop interval time
-        double evaluate(double dt, double setpoint, double currentvalue );
+        float evaluate(float dt, float setpoint, float currentvalue );
         void reset();
 
     private:
-        double _max;
-        double _min;
-        double _Kp;
-        double _Kd;
-        double _Ki;
-        double _old_error;
-        double _integral;
+        float _max;
+        float _min;
+        float _Kp;
+        float _Kd;
+        float _Ki;
+        float _old_error;
+        float _integral;
 };
 
 #endif

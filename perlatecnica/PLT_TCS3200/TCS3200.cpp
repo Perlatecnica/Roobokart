@@ -2,46 +2,28 @@
 #define TCS3200_DELAY 10
 
 TCS3200::TCS3200(const PinName & s0,const PinName & s1,const PinName & s2,const PinName & s3,const PinName & out)
-: mS0(s0), mS1(s1), mS2(s2), mS3(s3), signal(out) 
+: mS0(s0), mS1(s1), mS2(s2), mS3(s3), signal(out), mode(SCALE_2)
 {
-    SetMode(POWERDOWN);
+    WriteMode(mode);
     signal.rise(callback(this,&TCS3200::HighTrigger));
     signal.fall(callback(this,&TCS3200::LowTrigger));
 }
- 
-long TCS3200::ReadRed() 
+
+uint32_t TCS3200::ReadColor(const bool & s2, const bool & s3) 
 {
-    mS2=0;                    
-    mS3=0;
+    mS2=s2;                    
+    mS3=s3;
     ThisThread::sleep_for(TCS3200_DELAY);
-    return(pulsewidth);
+    return Fix(pulsewidth);
 }
  
-long TCS3200::ReadGreen() 
+void TCS3200::SetMode(const Mode & mode) 
 {
-    mS2=1;                    
-    mS3=1;
-    ThisThread::sleep_for(TCS3200_DELAY);
-    return(pulsewidth);
+    if (this->mode != POWERDOWN) WriteMode(mode);   
+    this->mode = mode;
 }
- 
-long TCS3200::ReadBlue() 
-{
-    mS2=0;                    
-    mS3=1;
-    ThisThread::sleep_for(TCS3200_DELAY);
-    return(pulsewidth);
-}
- 
-long TCS3200::ReadClear() 
-{
-    mS2=1;                    
-    mS3=0;
-    ThisThread::sleep_for(TCS3200_DELAY);
-    return(pulsewidth);
-}
- 
-void TCS3200::SetMode(Mode mode) 
+
+void TCS3200::WriteMode(const Mode & mode) 
 {
     switch (mode)
     {
@@ -77,4 +59,10 @@ void TCS3200::LowTrigger()
     timer.stop();
     pulsewidth = timer.read_us();
     timer.reset();
+}
+
+uint32_t TCS3200::Fix(const int & value)
+{
+    if (value >= 0) return (uint32_t)value;
+    return 0;
 }

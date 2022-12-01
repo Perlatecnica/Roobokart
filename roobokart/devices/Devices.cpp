@@ -16,24 +16,51 @@
 #include "../../roobokart/devices/Devices.h"
 
 Devices::Devices(Serial* ser) {
+#ifdef ROOBOKART_V3
+	ser->printf("\r\n\tROOBOKART v3.0.0\r\n");
+#else
 	ser->printf("\r\n\tROOBOKART v2.1.0\r\n");
+#endif
 
 	// IR sensors instances
+	#ifdef ROOBOKART_V3
+	rfrontIR_0 = new AnalogIn(RIGHT_FRONT_0_IR);
+	rfrontIR_1 = new AnalogIn(RIGHT_FRONT_1_IR);
+	rfrontIR_2 = new AnalogIn(RIGHT_FRONT_2_IR);
+	rfrontIR = rfrontIR_2;
+	#else
 	rfrontIR = new AnalogIn(RIGHT_FRONT_IR);
+	#endif
 	lfrontIR = new AnalogIn(LEFT_FRONT_IR);
 	cfrontIR = new AnalogIn(CENTRE_FRONT_IR);
 
 	// User button instance
 	usrButton = new DigitalIn(USER_BUTTON);
 
-	// Color sensor instance
-	trafficLightReader = new TrafficLightsReader();
+
 
 	// I2C Port
 	device_i2c = new DevI2C(I2C_SDA, I2C_SCL);
 
+	#ifdef ROOBOKART_V3
+	// I2C Port 3
+	device_i2c3 = new DevI2C(I2C3_SDA, I2C3_SCL);
+
+	// Proximity sensors instance
+	tof = new ToF53L0A1(device_i2c3, SPI3_MOSI, SPI3_MISO, SPI3_SCK, SHIFT_REG_LE, DISPLAY_CS, DISPLAY_A0, DISPLAY_LED);
+
+	// Color sensor instance
+	trafficLightReader = new TrafficLightsReader(device_i2c3);
+
+	#else
+
 	// Proximity sensors instance
 	tof = new ToF53L0A1(device_i2c);
+
+	// Color sensor instance
+	trafficLightReader = new TrafficLightsReader();
+
+	#endif
 
 	// MEMS sensors instance
 	mems = new Gyro(device_i2c);

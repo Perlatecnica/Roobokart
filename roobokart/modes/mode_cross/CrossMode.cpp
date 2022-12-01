@@ -49,9 +49,9 @@ int CrossMode::runMode(void)
 	crosstimer.start();
 
 	while(currentmode == mymode){
-		rfrontIR = currDevices->rfrontIR->read();
-		lfrontIR = currDevices->lfrontIR->read();
-		cfrontIR = currDevices->cfrontIR->read();
+		rfrontIR = currDevices-> readRightIR(); // rfrontIR->read();
+		lfrontIR = currDevices-> readLeftIR();	// lfrontIR->read();
+		cfrontIR = currDevices-> readCentreIR(); // cfrontIR->read();
 
 		currentDirection = currPlanning->GetDirection();
 		currentDirection = 0;// TEMP DEBUG

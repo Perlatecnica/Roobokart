@@ -22,28 +22,65 @@
 #include "debug.h"
 
 
-#define ROOBOKART_MASTER // Roobokart Rosso Master Demo new board
+//#define ROOBOKART_MASTER_V1 // Roobokart old version board
+#define ROOBOKART_MASTER_V3 // Roobokart new version board
 //#define ROOBOKART_A // Roobokart A old board
 
 /* SPECIFIC ROOBOKART DEFINITIONS */
 /* THE FOLLOWING PARAMETERS CAN BE MODIFIED */
 /* EACH ROOBOKART COULD HAVE DIFFERENT VALUES */
-#ifdef ROOBOKART_MASTER
-#define IR_THRESHOLD 0.8
+#ifdef ROOBOKART_MASTER_V1
+#define IR_THRESHOLD 0.5
 #define ROADSIGN_DETECTION_THRESHOLD_DEFAULT 0.5
 #define COLOR_THRESHOLD 0.3f
 #define BRAKING_FORCE_DEFAULT -10
-#define NAV_KP 64
-#define NAV_KI 50
-#define NAV_KD 1
+#define NAV_KP 48
+#define NAV_KI 8
+#define NAV_KD 0
 #define RSA_KP 1.2f				// road sign align gyro kp
+#define LINE_FOLLOWER_SP 0.50f	// line follower set point
 #define    MAX_NAV_SPEED 100	// navigation mode max speed
-#define    MIN_NAV_SPEED 20		// navigation mode min speed
-#define CRUISE_NAV_SPEED 45		// navigation mode cruise speed
-#define CRUISE_RSA_SPEED 40		// road sign align mode cruise speed
-#define    SEEK_TL_SPEED 35		// traffic light seek speed
+#define    MIN_NAV_SPEED 28		// navigation mode min speed
+#define CRUISE_NAV_SPEED 35		// navigation mode cruise speed
+#define CRUISE_RSA_SPEED 28		// road sign align mode cruise speed
+#define    SEEK_TL_SPEED 30		// traffic light seek speed
 #define  ESCAPE_TL_SPEED 40		// traffic light escape speed
+
+#define   IR_L_MIN_VALUE 0.039805f
+#define   IR_L_MAX_VALUE 1.000000f
+#define   IR_C_MIN_VALUE 0.047375f
+#define   IR_C_MAX_VALUE 1.000000f
+#define   IR_R_MIN_VALUE 0.052991f
+#define   IR_R_MAX_VALUE 1.000000f
+
 #endif
+
+#ifdef ROOBOKART_MASTER_V3
+#define IR_THRESHOLD 0.5
+#define ROADSIGN_DETECTION_THRESHOLD_DEFAULT 0.5
+#define COLOR_THRESHOLD 0.3f
+#define BRAKING_FORCE_DEFAULT -15
+#define NAV_KP 52
+#define NAV_KI 8
+#define NAV_KD 0
+#define RSA_KP 1.2f				// road sign align gyro kp
+#define LINE_FOLLOWER_SP 0.40f	// line follower set point
+#define    MAX_NAV_SPEED 100	// navigation mode max speed
+#define    MIN_NAV_SPEED 30 	// navigation mode min speed
+#define CRUISE_NAV_SPEED 35	 	// navigation mode cruise speed
+#define CRUISE_RSA_SPEED 30		// road sign align mode cruise speed
+#define    SEEK_TL_SPEED 35		// traffic light seek speed
+#define  ESCAPE_TL_SPEED 45		// traffic light escape speed
+
+#define   IR_L_MIN_VALUE 0.054212f
+#define   IR_L_MAX_VALUE 0.852259f
+#define   IR_C_MIN_VALUE 0.054701f
+#define   IR_C_MAX_VALUE 0.808303f
+#define   IR_R_MIN_VALUE 0.047863f
+#define   IR_R_MAX_VALUE 0.730647f
+
+#endif
+
 
 
 #ifdef ROOBOKART_A
@@ -57,7 +94,7 @@
 #define RSA_KP 1.2f				// road sign align gyro kp
 #define MAX_NAV_SPEED 100		// navigation mode max speed
 #define MIN_NAV_SPEED 20		// navigation mode min speed
-#define CRUISE_NAV_SPEED 35 	// navigation mode cruise speed
+#define CRUISE_NAV_SPEED 30 	// navigation mode cruise speed
 #define    SEEK_TL_SPEED 30		// traffic light seek speed
 #define  ESCAPE_TL_SPEED 35		// traffic light escape speed
 #endif
@@ -76,50 +113,53 @@
 #define RIGHT_IR_BLACK  rfrontIR > IR_THRESHOLD
 #define LEFT_IR_BLACK  lfrontIR > IR_THRESHOLD
 
-//A0 is used by the motor shield
-//A2 and A3 are busy
+
 
 //DEBUG
 #define IR_DEBUG
-
-//Front IR sensors
-#define RIGHT_FRONT_IR 		A5
-#define CENTRE_FRONT_IR 	A1
-#define LEFT_FRONT_IR		A4
 
 //Motors
 #define MOTOR_LEFT		0
 #define MOTOR_RIGHT		1
 
 /* BUSES */
+#undef  I2C_SDA
 #define I2C_SDA D14
+
+#undef  I2C_SCL
 #define I2C_SCL D15
 
-/* XNucleoIKS01A2 MEMS */
-#define IKS01A2_I2C_SDA D14
-#define IKS01A2_I2C_SCL D15
-#define IKS01A2_INT1    D11
-#define IKS01A2_INT2    D12
+#undef  I2C1_SDA
+#define I2C1_SDA I2C_SDA
 
+#undef  I2C1_SCL
+#define I2C1_SCL I2C_SCL
 
-/* Color Sensor */
-#define TCS3200_S0  PB_14
-#define TCS3200_S1  PB_13
-#define TCS3200_S2  PB_1
-#define TCS3200_S3  PB_15
-#define TCS3200_OUT PB_2
+#undef  I2C2_SDA
+#define I2C2_SDA PB_3
 
-/* XNucleo IHM12A1 */
-#define F_E_PIN PB_3//D2
-#define STANDBY_RST_PIN PB_6//D9
-#define DIR_A_PIN   D7//D6
-#define DIR_B_PIN   D6//D7
-#define PWM_A_PIN   D4//D5
-#define PWM_B_PIN   D5//D4
-#define PWM_REF_PIN A0
-#define BUZZER_PIN PC_9
+#undef  I2C2_SCL
+#define I2C2_SCL PB_10
 
-/* HC05 */
-#define BT_TX PA_9
-#define BT_RX PA_10
+#undef  I2C3_SDA
+#define I2C3_SDA PB_4
+
+#undef  I2C3_SCL
+#define I2C3_SCL PA_8
+
+#undef SPI3_MOSI
+#define SPI3_MOSI PC_12
+
+#undef SPI3_MISO
+#define SPI3_MISO PC_11
+
+#undef SPI3_SCK
+#define SPI3_SCK  PC_10
+
+#ifdef ROOBOKART_V3
+#include "roobokart_v3_pins.h"
+#else
+#include "roobokart_v1_pins.h"
+#endif
+
 #endif

@@ -74,15 +74,23 @@ public:
     int i2c_write(uint8_t* pBuffer, uint8_t DeviceAddr, uint8_t RegisterAddr,
                   uint16_t NumByteToWrite) {
         int ret;
-        uint8_t tmp[TEMP_BUF_SIZE];
+
+        /*uint8_t tmp[TEMP_BUF_SIZE];
 
         if(NumByteToWrite >= TEMP_BUF_SIZE) return -2;
 
-        /* First, send device address. Then, send data and STOP condition */
+        // First, send device address. Then, send data and STOP condition
         tmp[0] = RegisterAddr;
         memcpy(tmp+1, pBuffer, NumByteToWrite);
 
+        lock();
         ret = write(DeviceAddr, (const char*)tmp, NumByteToWrite+1, false);
+        unlock();*/
+
+		lock();
+		ret = write(DeviceAddr, (char*)&RegisterAddr, 1, true);
+		if (!ret) ret = write(DeviceAddr, (char*)pBuffer, NumByteToWrite, false);
+		unlock();
 
         if(ret) return -1;
         return 0;
@@ -104,15 +112,22 @@ public:
                  uint16_t NumByteToRead) {
         int ret;
 
+        lock();
         /* Send device address, with no STOP condition */
         ret = write(DeviceAddr, (const char*)&RegisterAddr, 1, true);
         if(!ret) {
             /* Read data, with STOP condition  */
             ret = read(DeviceAddr, (char*)pBuffer, NumByteToRead, false);
         }
+        unlock();
 
         if(ret) return -1;
         return 0;
+    }
+
+    void frequency(int speed)
+    {
+    	I2C::frequency(speed);
     }
 
 private:

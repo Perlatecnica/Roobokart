@@ -18,7 +18,7 @@
 
 #include "PID.h"
 
-PID::PID(double max, double min, double Kp, double Kd, double Ki )
+PID::PID(float max, float min, float Kp, float Kd, float Ki )
 {
 	//_dt = dt;
 	_max = max;
@@ -35,34 +35,30 @@ void PID::reset(){
 	_integral = 0;
 }
 
-double PID::evaluate(double dt, double setpoint, double currentvalue )
+float PID::evaluate(float dt, float setpoint, float currentvalue )
 {
-	double _dt = dt;
+	float _dt = dt;
 
 	// error
-    double error = setpoint - currentvalue;
+	float error = setpoint - currentvalue;
 
     // PID controller Proportional term
-    double P = _Kp * error;
+	float P = _Kp * error;
 
     // PID controller Discrete Integral term
     _integral += error * _dt;
-    double I = _Ki * _integral;
+    float I = _Ki * _integral;
 
     // PID controller Derivative term
-    double derivative = (error - _old_error) / _dt;
-    double D = _Kd * derivative;
+    float derivative = (error - _old_error) / _dt;
+    float D = _Kd * derivative;
 
     // Controller Output
-    double C = P + I + D;
+    float C = P + I + D;
 
     // Saturation to interval values
-    if( C > _max ){
-    	C = _max;
-    }
-    else if( C < _min ){
-        C = _min;
-    }
+    if( C > _max ) C = _max;
+    if( C < _min ) C = _min;
 
     // Store the current error value as the previous one for next calling
     _old_error = error;

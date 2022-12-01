@@ -55,9 +55,9 @@ int RoadSignAlignMode::runMode(void)
 		cfrontIR = 0;
 
 		for(int k=0;k<5;k++){
-			rfrontIR += currDevices->rfrontIR->read();
-			lfrontIR += currDevices->lfrontIR->read();
-			cfrontIR += currDevices->cfrontIR->read();
+			rfrontIR += currDevices->readRightIR(); // rfrontIR->read();
+			lfrontIR += currDevices->readLeftIR();  // lfrontIR->read();
+			cfrontIR += currDevices->readCentreIR(); // cfrontIR->read();
 			//wait_ms(10);
 		}
 

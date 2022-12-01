@@ -20,7 +20,17 @@
 
 #include "../../roobokart/roobokart_def.h"
 #include "mbed.h"
- 
+
+#ifdef ROOBOKART_V3
+STSpin240_250_init_t init =
+ {
+  10000,  /* Frequency of PWM of Input Bridge A in Hz up to 100000Hz             */
+  10000,  /* Frequency of PWM of Input Bridge B in Hz up to 100000Hz             */
+  10000,  /* Frequency of PWM used for Ref pin in Hz up to 100000Hz              */
+  100,    /* Duty cycle of PWM used for Ref pin (from 0 to 100)                  */
+  TRUE   /* Dual Bridge configuration  (FALSE for mono, TRUE for dual brush dc) */
+ };
+#else
 STSpin240_250_init_t init =
  {
   20000, /* Frequency of PWM of Input Bridge A in Hz up to 100000Hz             */
@@ -29,6 +39,7 @@ STSpin240_250_init_t init =
   50,    /* Duty cycle of PWM used for Ref pin (from 0 to 100)                  */
   TRUE   /* Dual Bridge configuration  (FALSE for mono, TRUE for dual brush dc) */
  };
+#endif
 
 /* Motor Control Component. */
 STSpin240_250 *motor;
@@ -250,5 +261,67 @@ void MotorShieldIHM12A1::run(int8_t direction, int8_t velocity, unsigned int lMo
         speed(lMotor,speedMod);
         speed(rMotor,velocity);
     }
+}
+
+
+void MotorShieldIHM12A1::saturate(float & value)
+{
+	if (value > MAX_SPEED_VALUE) value = MAX_SPEED_VALUE;
+	else if (value < -MAX_SPEED_VALUE) value = -MAX_SPEED_VALUE;
+}
+
+void MotorShieldIHM12A1::excess(float & value, float & out)
+{
+	if (value > MAX_SPEED_VALUE)
+    {
+        out = value - MAX_SPEED_VALUE;
+    } else
+    if (value < -MAX_SPEED_VALUE)
+    {
+        out = value + MAX_SPEED_VALUE;
+    }
+    else
+    {
+        out = 0.0f;
+    }
+}
+
+void MotorShieldIHM12A1::tank(float direction, float velocity, unsigned int lMotor, unsigned int rMotor)
+{
+	float lMotorSpeed, rMotorSpeed,	lMotorExcess, rMotorExcess;
+
+	saturate(direction);
+	saturate(velocity);
+
+	lMotorSpeed = velocity + direction;
+	rMotorSpeed = velocity - direction;
+
+	excess(lMotorSpeed, lMotorExcess);
+	excess(rMotorSpeed, rMotorExcess);
+
+	lMotorSpeed -= rMotorExcess + lMotorExcess;
+	rMotorSpeed -= lMotorExcess + rMotorExcess;
+
+	speed(lMotor,lMotorSpeed);
+	speed(rMotor,rMotorSpeed);
+}
+
+void MotorShieldIHM12A1::car(float direction, float velocity, unsigned int lMotor, unsigned int rMotor)
+{
+    float lMotorSpeed, rMotorSpeed;
+    bool invert = (direction < 0);
+
+    if (invert) direction = -direction;
+
+    saturate(direction);
+    saturate(velocity);
+
+    lMotorSpeed = velocity;
+    rMotorSpeed = (1.0f - (direction / (MAX_SPEED_VALUE/2))) * velocity;
+
+    if (invert) swap(lMotorSpeed, rMotorSpeed);
+
+    speed(lMotor, lMotorSpeed);
+    speed(rMotor, rMotorSpeed);
 }
 

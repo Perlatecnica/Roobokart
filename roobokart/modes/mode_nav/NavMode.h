@@ -39,7 +39,6 @@ private:
     float cfrontIR;
     float currentdirection;
     float spd;
-    int8_t direction;
     PID *dirPID;
     Timer pidtimer;
     Planning *currPlanning;

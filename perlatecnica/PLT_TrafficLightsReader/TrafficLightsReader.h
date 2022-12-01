@@ -22,35 +22,61 @@
 #define PLT_TRAFFIC_LIGHTS_READER_H
 
 #include <mbed.h>
-#include "roobokart/roobokart_def.h"
-#include "perlatecnica/PLT_TCS3200/TCS3200.h"
+#include "roobokart_def.h"
+
+#if defined(ROOBOKART_V1)
+#include "PLT_TCS3200/TCS3200.h"
+#elif defined(ROOBOKART_V3)
+#include "PLT_VD6283/VD6283.h"
+#endif
+
 
 class TrafficLightsReader
 {
-public:
-  enum TLR_Info { RED, GREEN, YELLOW, BLACK };
+    public:
+    enum TLR_Info { RED, GREEN, YELLOW, BLACK };
 
-private:
-  TCS3200 color;
-  long clear;
-  float red;
-  float green;
-  float blue;
+    #if defined(ROOBOKART_V1)
+    TrafficLightsReader();
+    #elif defined(ROOBOKART_V3)
+    TrafficLightsReader(DevI2C * dev);
+    #endif
 
-public:    
-  TrafficLightsReader();  
-  TLR_Info read();
+    TLR_Info read();
+    inline void start()
+    {
+		#if defined(ROOBOKART_V1)
+		color.Start();
+		#endif
+    }
+    inline void stop()
+    {
+		#if defined(ROOBOKART_V1)
+    	color.Stop();
+		#endif
+    }
 
-  inline void start() { color.SetMode(TCS3200::SCALE_2); }
-  inline void stop() { color.SetMode(TCS3200::POWERDOWN); }
+    inline const float & getRed() const { return red; }
+    inline const float & getGreen() const { return green; }
+    inline const float & getBlue() const { return blue; }
+    inline const float & getThreshold() const { return threshold; }
+    inline void setThreshold(const float & value) { threshold = value; }
 
-  inline const float & getRed() const { return red; }
-  inline const float & getGreen() const { return green; }
-  inline const float & getBlue() const { return blue; }
+    private:
+    void readColors();
+    float safeDiv(long val1, long val2);
 
-private:
-  void readColors();
-  float safeDiv(long val1, long val2);
+    private:
+    #if defined(ROOBOKART_V1)
+    TCS3200 color;
+    #elif defined(ROOBOKART_V3)
+    VD6283 color;
+    #endif
+    long clear;
+    float red;
+    float green;
+    float blue;
+    float threshold;
 };
 
 #endif

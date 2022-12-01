@@ -36,10 +36,9 @@ int NavMode::runMode(void)
 	printf("Nav Mode: It works!\r\n");
 #endif
 
-	double speed = 0;// = currPlanning->getSpeed() ;
+	float speed = 0;// = currPlanning->getSpeed() ;
 	int roadsigndetected = 0; // It stores the information that the road sign has been detected
-	double det = 0; // deltaT for PID evaluation
-	double delSpeed = 0;
+	float det = 0; // deltaT for PID evaluation
 
 	currentmode = mymode;
 	nextmode = currPlanning->SetCurrentMode(currentmode);
@@ -54,62 +53,40 @@ int NavMode::runMode(void)
 	while(currentmode == mymode){
 
 		// Reading IRs value
-		rfrontIR = currDevices->rfrontIR->read();
-		lfrontIR = currDevices->lfrontIR->read();
-		cfrontIR = currDevices->cfrontIR->read();
+		rfrontIR = currDevices->readRightIR();
+		lfrontIR = currDevices->readLeftIR();
+		cfrontIR = currDevices->readCentreIR();
 
-		// The Roobokart shall follow a constant value evaluated at Calibration time
-		currentdirection = rfrontIR;
-
-		speed = currPlanning->accelerate();
+		//speed = currPlanning->accelerate();
 
 		// Evaluating PID for direction correction
-		det = (double)pidtimer.read();
-		direction = (int8_t)(dirPID->evaluate(det,spd,currentdirection));
+		det = pidtimer.read();
+		currentdirection = dirPID->evaluate(det, spd, rfrontIR);
 		pidtimer.reset();
 
 
-#ifdef DEBUG_NAV_MODE
-		printf("rfrontIR: %f\r\n",rfrontIR);
-		printf("lfrontIR: %f\r\n",lfrontIR);
-		printf("cfrontIR: %f\r\n",cfrontIR);
-		printf("direction: %3d\r\n",direction);
-		printf("speed: %f\r\n",speed);
-		printf("\033[5A");
-#endif
-
-
 		// Roobokart navigates
-#ifdef DEBUG_NAV_MODE
-		printf("roadsigndetected: %d\r\n",roadsigndetected);
-#endif
-		// Check if the road sign is detected
-		if(roadsigndetected == 0) {
-			if(currDevices->roadsignDetected(cfrontIR)){
+		if(roadsigndetected == 0)
+		{
+			if(currDevices->roadsignDetected(cfrontIR))
+			{
 				// Once the road sign has been detected, the Roobokart proceeds at slower speed
-				speed = (0.8)*speed;
-
-				currDevices->tof->display(speed);
-
-				currDevices->currMotors.turn(0, speed, MOTOR_LEFT , MOTOR_RIGHT);
+				currDevices->currMotors.turn(0, MIN_NAV_SPEED, MOTOR_LEFT, MOTOR_RIGHT);
 				roadsigndetected = 1;
-			}else {
+			}
+			else
+			{
 				// The Roobokart navigates until the road sign is detected
-				// if direction is different from zero, the speed is reduced in order to help the PID algorithm
-				delSpeed = direction;
-				if (delSpeed<0) delSpeed *= -1;
-				delSpeed = (delSpeed/100)*speed;
-
-				speed = speed - delSpeed;
-				currDevices->tof->display(speed);
-
-				currDevices->currMotors.turn(-direction, speed, MOTOR_LEFT , MOTOR_RIGHT);
+				speed = Devices::map(1.0f-abs(spd-rfrontIR), 0.0f, 1.0f, MIN_NAV_SPEED, CRUISE_NAV_SPEED);
+				currDevices->currMotors.car(-currentdirection, speed, MOTOR_LEFT, MOTOR_RIGHT);
 			}
 		}
 		// Road sign detected - managing the handshake with next mode
-		else {
+		else
+		{
 			// The Roobokart is stopped as soon as the cfrontIR sensor is over the blue line
-			if(!currDevices->roadsignDetected(cfrontIR)){
+			if(!currDevices->roadsignDetected(cfrontIR))
+			{
 				currDevices->currMotors.stop();
 				// Roadsign detected, it switches to next mode
 				currentmode = nextmode;
@@ -117,9 +94,18 @@ int NavMode::runMode(void)
 				break;
 			}
 		}
-		//break;
 
-		wait_ms(10);//40
+#ifdef DEBUG_NAV_MODE
+		printf("rfrontIR: %f\r\n",rfrontIR);
+		printf("lfrontIR: %f\r\n",lfrontIR);
+		printf("cfrontIR: %f\r\n",cfrontIR);
+		printf("direction: %4.2f\r\n",currentdirection);
+		printf("speed: %f\r\n",speed);
+		printf("roadsigndetected: %d\r\n",roadsigndetected);
+		printf("\033[6A");
+#endif
+
+		wait_ms(10);
 	} // end while
 
 	// Restore initial condition
